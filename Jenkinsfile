@@ -66,6 +66,12 @@ pipeline {
         string(name: 'STT_RG_NAME', defaultValue:'tfs_rg_dev_eus_sitl', description: ''' Azure Resource Group name of Azure STT service.
             CCA-DEV
             ''')
+
+        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'ssna-servicebustopics-cca-dev-eastus', description: '''Name of the service bus topic
+            ssna-servicebustopics-cca-dev-eastus
+            ssna-servicebustopics-cca-stg-eastus
+            ssna-servicebustopics-cca-prod-eastus
+            ''' )
     }
 
     environment {
@@ -120,6 +126,7 @@ pipeline {
                         sed -i 's|\$REDACT_FUNC_URL|${redact_func_url}|g' workflow.json
                         sed -i 's|\$AZURE_STT_ENDPOINT|${azure_stt_endpoint}|g' workflow.json
                         sed -i 's|\$AZURE_STT_KEY|${azure_stt_key}|g' workflow.json
+                        sed -i 's|\$SERVICE_BUS_TOPIC_NAME|${params.SERVICE_BUS_TOPIC_NAME}|g' workflow.json
                     """
                 }
             }
