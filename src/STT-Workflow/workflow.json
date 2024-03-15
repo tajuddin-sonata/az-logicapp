@@ -2015,7 +2015,7 @@
                 "inputs": {
                   "api_key": "$AZURE_STT_KEY",
                   "region": "@{replace(toLower(appsetting('REGION_NAME')),' ','')}",
-                  "end_point": "$AZURE_STT_NAME.cognitiveservices.azure.com",
+                  "end_point": "$AZURE_STT_ENDPOINT",
                   "features": {
                     "punctuationMode": "DictatedAndAutomatic",
                     "profanityFilterMode": "Removed",

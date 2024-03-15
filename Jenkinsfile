@@ -60,10 +60,10 @@ pipeline {
             ssna-logicapp-cca-prod-eastus
             ''' )
 
-        string(name: 'AZURE_STT_NAME', defaultValue:'CCA-Dev-Azure-AI-MultiService', description: '''The name of LogicApp to deploy
+        string(name: 'AZURE_STT_NAME', defaultValue:'ssna-cogs-cca-dev-eastus', description: '''The name of LogicApp to deploy
             CCA-Dev-Azure-AI-MultiService
             ''' )
-        string(name: 'STT_RG_NAME', defaultValue:'CCA-DEV', description: ''' Azure Resource Group name of Azure STT service.
+        string(name: 'STT_RG_NAME', defaultValue:'tfs_rg_dev_eus_sitl', description: ''' Azure Resource Group name of Azure STT service.
             CCA-DEV
             ''')
     }
@@ -105,8 +105,11 @@ pipeline {
                     def redact_func_url = sh(script: "func azure functionapp list-functions ${params.REDACT_FUNCTIONAPP_NAME} --show-keys | awk '/Invoke url:/ {print \$3}'", returnStdout: true).trim()
                     echo "redact_func_url: ${redact_func_url}"
 
-                    def azure_stt_key = sh(script: "az cognitiveservices account keys list --name ${params.AZURE_STT_NAME} --resource-group ${params.STT_RG_NAME}", returnStdout: true).trim()
-                    echo "redact_func_url: ${redact_func_url}"
+                    def azure_stt_endpoint = sh(script: "az cognitiveservices account show -n ${params.AZURE_STT_NAME} -g ${params.STT_RG_NAME} --query properties.endpoint --output tsv | awk -F/ '{print \$3}'", returnStdout: true).trim()
+                    echo "azure_stt_endpoint: ${azure_stt_endpoint}"
+
+                    def azure_stt_key = sh(script: "az cognitiveservices account keys list --name ${params.AZURE_STT_NAME} --resource-group ${params.STT_RG_NAME} --query key1 --output tsv", returnStdout: true).trim()
+                    echo "azure_stt_key: ${azure_stt_key}"
 
                     sh """
                         cd src/STT-Workflow/
@@ -115,7 +118,7 @@ pipeline {
                         sed -i 's|\$TRANSCRIBE_FUNC_URL|${transcribe_func_url}|g' workflow.json
                         sed -i 's|\$ANALYSE_FUNC_URL|${analyse_func_url}|g' workflow.json
                         sed -i 's|\$REDACT_FUNC_URL|${redact_func_url}|g' workflow.json
-                        sed -i 's|\$AZURE_STT_NAME|${params.AZURE_STT_NAME}|g' workflow.json
+                        sed -i 's|\$AZURE_STT_ENDPOINT|${azure_stt_endpoint}|g' workflow.json
                         sed -i 's|\$AZURE_STT_KEY|${azure_stt_key}|g' workflow.json
                     """
                 }
@@ -149,7 +152,7 @@ pipeline {
                         unzip "az-ci-stt-workflow-orchestrator-\${artifact_version}.zip" -d "az-ci-stt-workflow-orchestrator-\${artifact_version}"
 
                         ls -ltr
-                        az logicapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-stt-workflow-orchestrator-\${artifact_version}.zip
+                        az webapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-stt-workflow-orchestrator-\${artifact_version}.zip
                     """
                 }
             }
