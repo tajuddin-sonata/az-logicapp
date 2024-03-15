@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'jenkins-slave'
+        label 'GCP-jenkins-worker04'
     }
 
     parameters{
@@ -134,22 +134,22 @@ pipeline {
                             artifact_version=\$(git describe --tags)
                             echo "\${artifact_version}" > src/version.txt
                             cd src/
-                            zip -r "../az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" *
+                            zip -r "../az-ci-stt-workflow-orchestrator-\${artifact_version}.zip" *
                             cd $WORKSPACE
-                            echo "CREATED [az-ci-trail-workflow-orchestrator-\${artifact_version}.zip]"
+                            echo "CREATED [az-ci-stt-workflow-orchestrator-\${artifact_version}.zip]"
                             curl -v -u deployment:deployment123 --upload-file \
-                                "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" \
-                                "http://74.225.187.237:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                                "az-ci-stt-workflow-orchestrator-\${artifact_version}.zip" \
+                                "http://74.225.187.237:8081/repository/packages/cca/az-ci-stt-workflow-orchestrator-\${artifact_version}.zip"
                         else
                             artifact_version=$ver
                             echo "Downloading specified artifact version from Nexus..."
-                            curl -v -u nexus-user:nexus@123 -O "http://74.225.187.237:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                            curl -v -u nexus-user:nexus@123 -O "http://74.225.187.237:8081/repository/packages/cca/az-ci-stt-workflow-orchestrator-\${artifact_version}.zip"
                         fi
-                        rm -rf "az-ci-trail-workflow-orchestrator-\${artifact_version}"
-                        unzip "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" -d "az-ci-trail-workflow-orchestrator-\${artifact_version}"
+                        rm -rf "az-ci-stt-workflow-orchestrator-\${artifact_version}"
+                        unzip "az-ci-stt-workflow-orchestrator-\${artifact_version}.zip" -d "az-ci-stt-workflow-orchestrator-\${artifact_version}"
 
                         ls -ltr
-                        az logicapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-trail-workflow-orchestrator-\${artifact_version}.zip
+                        az logicapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-stt-workflow-orchestrator-\${artifact_version}.zip
                     """
                 }
             }
