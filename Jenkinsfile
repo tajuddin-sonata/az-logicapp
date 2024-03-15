@@ -53,11 +53,17 @@ pipeline {
             ssna-func-cca-stg-eastus-wfredact
             ssna-func-cca-prod-eastus-wfredact
             ''' )
-        
+        SERVICE_BUS_TOPIC_NAME
         string(name: 'AZURE_LOGICAPP_NAME', defaultValue:'ssna-logicapp-cca-dev-eastus', description: '''The name of LogicApp to deploy
             ssna-logicapp-cca-dev-eastus
             ssna-logicapp-cca-stg-eastus
             ssna-logicapp-cca-prod-eastus
+            ''' )
+        
+        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'ssna-servicebustopics-cca-dev-eastus', description: '''Name of the service bus topic
+            ssna-servicebustopics-cca-dev-eastus
+            ssna-servicebustopics-cca-stg-eastus
+            ssna-servicebustopics-cca-prod-eastus
             ''' )
 
 
@@ -107,6 +113,7 @@ pipeline {
                         sed -i 's|\$TRANSCRIBE_FUNC_URL|${transcribe_func_url}|g' workflow.json
                         sed -i 's|\$ANALYSE_FUNC_URL|${analyse_func_url}|g' workflow.json
                         sed -i 's|\$REDACT_FUNC_URL|${redact_func_url}|g' workflow.json
+                        sed -i 's|\$SERVICE_BUS_TOPIC_NAME|${params.SERVICE_BUS_TOPIC_NAME}|g' workflow.json
 
                     """
                 }

@@ -1071,7 +1071,7 @@
         "type": "ServiceProvider",
         "inputs": {
           "parameters": {
-            "entityName": "sitl-content",
+            "entityName": "$SERVICE_BUS_TOPIC_NAME", 
             "message": {
               "contentData": "@outputs('encoded_message')"
             }
