@@ -10,7 +10,7 @@ pipeline {
             'prod'],
             description: 'Choose which environment to deploy to.')
         
-        string(name: 'VERSION', description: 'Explicit version to deploy (i.e., "v0.1-51-g87b72a"). Leave blank to build latest commit')
+        string(name: 'VERSION', description: 'Explicit version to deploy (i.e., "v0.1"). Leave blank to build latest commit')
 
 
         string(name: 'SUBSCRIPTION', defaultValue:'48986b2e-5349-4fab-a6e8-d5f02072a4b8', description: ''' select subscription as:
@@ -18,40 +18,40 @@ pipeline {
             34b1c36e-d8e8-4bd5-a6f3-2f92a1c0626e
             70c3af66-8434-419b-b808-0b3c0c4b1a04''')
 
-        string(name: 'RESOURCE_GROUP_NAME', defaultValue:'ssna-rg-cca-dev-eus', description: ''' Azure Resource Group in which the FunctionApp need to deploy.
-            ssna-rg-cca-dev-eus
-            ssna-rg-cca-stg-eus
-            ssna-rg-cca-prod-eus
+        string(name: 'RESOURCE_GROUP_NAME', defaultValue:'sitl-rg-prod-eus-cca', description: ''' Azure Resource Group in which the FunctionApp need to deploy.
+            sitl-rg-dev-eus-cca
+            sitl-rg-stg-eus-cca
+            sitl-rg-prod-eus-cca
             ''')
 
-        string(name: 'CONFIGURE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfconfigure', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfconfigure
-            ssna-func-cca-stg-eastus-wfconfigure
-            ssna-func-cca-prd-eastus-wfconfigure
+        string(name: 'CONFIGURE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfconfigure', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfconfigure
+            ssna-func-cca-stg-eus-wfconfigure
+            ssna-func-cca-prod-eus-wfconfigure
             ''' )
 
-        string(name: 'TRANSCODE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wftranscode', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wftranscode
-            ssna-func-cca-stg-eastus-wftranscode
-            ssna-func-cca-prod-eastus-wftranscode
+        string(name: 'TRANSCODE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-transcode', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-transcode
+            ssna-func-cca-stg-eus-transcode
+            ssna-func-cca-prod-eus-transcode
             ''' )
 
-        string(name: 'TRANSCRIBE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wftranscribe', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wftranscribe
-            ssna-func-cca-stg-eastus-wftranscribe
-            ssna-func-cca-prod-eastus-wftranscribe
+        string(name: 'TRANSCRIBE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-transcribe', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-transcribe
+            ssna-func-cca-stg-eus-transcribe
+            ssna-func-cca-prod-eus-transcribe
             ''' )
 
-        string(name: 'ANALYSE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfanalyse', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfanalyse
-            ssna-func-cca-stg-eastus-wfanalyse
-            ssna-func-cca-prod-eastus-wfanalyse
+        string(name: 'ANALYSE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfanalyse', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfanalyse
+            ssna-func-cca-stg-eus-wfanalyse
+            ssna-func-cca-prod-eus-wfanalyse
             ''' )
 
-        string(name: 'REDACT_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfredact', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfredact
-            ssna-func-cca-stg-eastus-wfredact
-            ssna-func-cca-prod-eastus-wfredact
+        string(name: 'REDACT_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfredact', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfredact
+            ssna-func-cca-stg-eus-wfredact
+            ssna-func-cca-prod-eus-wfredact
             ''' )
         
         string(name: 'AZURE_LOGICAPP_NAME', defaultValue:'ssna-logicapp-cca-dev-eastus', description: '''The name of LogicApp to deploy
@@ -61,23 +61,27 @@ pipeline {
             ''' )
 
         string(name: 'AZURE_STT_NAME', defaultValue:'ssna-cogs-cca-dev-eastus', description: '''The name of LogicApp to deploy
-            CCA-Dev-Azure-AI-MultiService
+            ssna-cogs-cca-dev-eastus
+            ssna-cogs-cca-stg-eastus
+            ssna-cogs-cca-prod-eastus
             ''' )
-        string(name: 'STT_RG_NAME', defaultValue:'tfs_rg_dev_eus_sitl', description: ''' Azure Resource Group name of Azure STT service.
-            CCA-DEV
+        string(name: 'STT_RG_NAME', defaultValue:'sitl-rg-prod-eus-cca', description: ''' Azure Resource Group name of Azure STT service.
+            sitl-rg-dev-eus-cca
+            sitl-rg-stg-eus-cca
+            sitl-rg-prod-eus-cca
             ''')
 
-        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'ssna-servicebustopics-cca-dev-eastus', description: '''Name of the service bus topic
-            ssna-servicebustopics-cca-dev-eastus
-            ssna-servicebustopics-cca-stg-eastus
-            ssna-servicebustopics-cca-prod-eastus
+        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'ssna-cca-dev-contentt', description: '''Name of the service bus topic
+            ssna-cca-dev-content
+            ssna-cca-stg-content
+            ssna-cca-prod-content
             ''' )
     }
 
     environment {
-        AZURE_CLIENT_ID = credentials('azurerm_client_id')
-        AZURE_CLIENT_SECRET = credentials('azurerm_client_secret')
-        AZURE_TENANT_ID = credentials('azurerm_tenant_id')
+        AZURE_CLIENT_ID = credentials("az_cca_${params.ENVIRONMENT}_client_id")
+        AZURE_CLIENT_SECRET = credentials("az_cca_${params.ENVIRONMENT}_secret_value")
+        AZURE_TENANT_ID = credentials("az_cca_${params.ENVIRONMENT}_tenant_id")
     }
 
     stages {
