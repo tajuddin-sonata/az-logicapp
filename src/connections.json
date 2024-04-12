@@ -14,16 +14,6 @@
         "id": "/serviceProviders/AzureBlob"
       }
     },
-    "eventHub": {
-      "displayName": "EventHub-Send",
-      "parameterSetName": "connectionString",
-      "parameterValues": {
-        "connectionString": "@appsetting('eventHub_connectionString')"
-      },
-      "serviceProvider": {
-        "id": "/serviceProviders/eventHub"
-      }
-    },
     "serviceBus": {
       "displayName": "servicebus-connection",
       "parameterSetName": "ManagedServiceIdentity",

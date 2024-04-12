@@ -81,9 +81,9 @@
       "GetLandingContainerMetadata": {
         "type": "Compose",
         "inputs": {
-          "client_id": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_client']))",
-          "step": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_step']))",
-          "type": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_media_type']))"
+          "client_id": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client']))",
+          "step": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step']))",
+          "type": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type']))"
         },
         "runAfter": {
           "HTTPRequestForMetadata": [
@@ -141,6 +141,9 @@
               "InputForRedact": [
                 "SUCCEEDED"
               ]
+            },
+            "limit": {
+              "timeout": "PT30M"
             },
             "runtimeConfiguration": {
               "contentTransfer": {
@@ -217,9 +220,9 @@
               "tempredactvideoinput": {
                 "type": "Compose",
                 "inputs": {
-                  "bucket_name": "@outputs('working_files10')?['audio']['bucket']",
-                  "full_path": "@outputs('working_files10')?['audio']['object']",
-                  "version": "@outputs('working_files10')?['audio']['generation']"
+                  "bucket_name": "@outputs('working_files10')?['video']['bucket']",
+                  "full_path": "@outputs('working_files10')?['video']['object']",
+                  "version": "@outputs('working_files10')?['video']['generation']"
                 }
               }
             },
@@ -366,7 +369,7 @@
               "context": "@outputs('context1')",
               "function_config": {
                 "redact_config": {
-                  "types_to_redact": "@if(contains(outputs('config')?['redact']['CI_REDACT_OPTIONS'],'types_to_redact'),outputs('config')['redact']['CI_REDACT_OPTIONS']['types_to_redact'],'[]')"
+                  "types_to_redact": "@if(contains(outputs('config')?['redact']['CI_REDACT_OPTIONS'],'types_to_redact'),outputs('config')['redact']['CI_REDACT_OPTIONS']['types_to_redact'],outputs('EmptyArray1'))"
                 },
                 "signing_account": "@outputs('config')?['redact']['CI_SA_EMAIL']"
               },
@@ -374,7 +377,7 @@
               "staging_config": "@outputs('staging_config')"
             },
             "runAfter": {
-              "redaction_input_files": [
+              "EmptyArray1": [
                 "SUCCEEDED"
               ]
             }
@@ -577,6 +580,15 @@
             "inputs": "@if(equals(outputs('video_tempfile1')?['video'],null),outputs('tempfile'),outputs('video_tempfile1'))",
             "runAfter": {
               "staged_files15": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "EmptyArray1": {
+            "type": "Compose",
+            "inputs": [],
+            "runAfter": {
+              "redaction_input_files": [
                 "SUCCEEDED"
               ]
             }
@@ -895,9 +907,14 @@
           "nlp_spellcheck_config": {
             "type": "Compose",
             "inputs": {
-              "add_words": "@if(contains(outputs('config')?['analyse_transcript'],'CI_SPELLCHECK_OPTIONS'),outputs('config')?['analyse_transcript']['CI_SPELLCHECK_OPTIONS']['add_words'],'[]')",
-              "nlp_ignore": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'nlp_ignore'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['nlp_ignore'],'[]')",
-              "rule_patterns": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'rule_patterns'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['rule_patterns'],'[]')"
+              "add_words": "@if(contains(outputs('config')?['analyse_transcript'],'CI_SPELLCHECK_OPTIONS'),outputs('config')?['analyse_transcript']['CI_SPELLCHECK_OPTIONS']['add_words'],outputs('EmptyArray'))",
+              "nlp_ignore": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'nlp_ignore'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['nlp_ignore'],outputs('EmptyArray'))",
+              "rule_patterns": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'rule_patterns'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['rule_patterns'],outputs('EmptyArray'))"
+            },
+            "runAfter": {
+              "EmptyArray": [
+                "SUCCEEDED"
+              ]
             }
           },
           "staged_files10": {
@@ -997,6 +1014,10 @@
                 "SUCCEEDED"
               ]
             }
+          },
+          "EmptyArray": {
+            "type": "Compose",
+            "inputs": []
           }
         },
         "else": {
@@ -1071,7 +1092,7 @@
         "type": "ServiceProvider",
         "inputs": {
           "parameters": {
-            "entityName": "$SERVICE_BUS_TOPIC_NAME", 
+            "entityName": "$SERVICE_BUS_TOPIC_NAME",
             "message": {
               "contentData": "@outputs('encoded_message')"
             }

@@ -79,7 +79,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // checkout scm
-                git branch: 'main', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
+                git branch: 'feature/without_callback', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
 
             }
         }

@@ -25,9 +25,9 @@
   "INIT-bucket_label_tags": {
     "type": "Object",
     "value": {
-      "client": "ci_client",
-      "step": "ci_step",
-      "type": "ci_media_type"
+      "client": "Ci_client",
+      "step": "Ci_step",
+      "type": "Ci_media_type"
     }
   },
   "INIT-staging_config": {
