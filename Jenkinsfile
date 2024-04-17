@@ -6,80 +6,78 @@ pipeline {
     parameters{
         choice(name: 'ENVIRONMENT', choices:[
             'dev',
-            'staging',
+            'stg',
             'prod'],
             description: 'Choose which environment to deploy to.')
         
         string(name: 'VERSION', description: 'Explicit version to deploy (i.e., "v0.1-51-g87b72a"). Leave blank to build latest commit')
 
 
-        string(name: 'SUBSCRIPTION', defaultValue:'48986b2e-5349-4fab-a6e8-d5f02072a4b8', description: ''' select subscription as:
-            48986b2e-5349-4fab-a6e8-d5f02072a4b8
-            34b1c36e-d8e8-4bd5-a6f3-2f92a1c0626e
-            70c3af66-8434-419b-b808-0b3c0c4b1a04''')
+        string(name: 'SUBSCRIPTION', defaultValue:'3dd867b9-cab3-4661-979f-0e69d467e8f5', description: ''' select subscription as:
+            3dd867b9-cab3-4661-979f-0e69d467e8f5
+            6fd0ed8f-99ff-480e-a5ff-f741fb2b8cec
+            054168d1-524c-4d69-a9a2-bdf62c2bb47c''')
 
-        string(name: 'RESOURCE_GROUP_NAME', defaultValue:'ssna-rg-cca-dev-eus', description: ''' Azure Resource Group in which the FunctionApp need to deploy.
-            ssna-rg-cca-dev-eus
-            ssna-rg-cca-stg-eus
-            ssna-rg-cca-prod-eus
+        string(name: 'RESOURCE_GROUP_NAME', defaultValue:'ssna-rg-cca-dev-eastus', description: ''' Azure Resource Group in which the FunctionApp need to deploy.
+            ssna-rg-cca-dev-eastus
+            ssna-rg-cca-stg-eastus
+            ssna-rg-cca-prod-eastus
             ''')
 
-        string(name: 'CONFIGURE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfconfigure', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfconfigure
-            ssna-func-cca-stg-eastus-wfconfigure
-            ssna-func-cca-prd-eastus-wfconfigure
+        string(name: 'CONFIGURE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfconfigure', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfconfigure
+            ssna-func-cca-stg-eus-wfconfigure
+            ssna-func-cca-prod-eus-wfconfigure
             ''' )
 
-        string(name: 'TRANSCODE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wftranscode', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wftranscode
-            ssna-func-cca-stg-eastus-wftranscode
-            ssna-func-cca-prod-eastus-wftranscode
+        string(name: 'TRANSCODE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-transcode', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-transcode
+            ssna-func-cca-stg-eus-transcode
+            ssna-func-cca-prod-eus-transcode
             ''' )
 
-        string(name: 'TRANSCRIBE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wftranscribe', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wftranscribe
-            ssna-func-cca-stg-eastus-wftranscribe
-            ssna-func-cca-prod-eastus-wftranscribe
+        string(name: 'TRANSCRIBE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-transcribe', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-transcribe
+            ssna-func-cca-stg-eus-transcribe
+            ssna-func-cca-prod-eus-transcribe
             ''' )
 
-        string(name: 'ANALYSE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfanalyse', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfanalyse
-            ssna-func-cca-stg-eastus-wfanalyse
-            ssna-func-cca-prod-eastus-wfanalyse
+        string(name: 'ANALYSE_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfanalyse', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfanalyse
+            ssna-func-cca-stg-eus-wfanalyse
+            ssna-func-cca-prod-eus-wfanalyse
             ''' )
 
-        string(name: 'REDACT_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eastus-wfredact', description: '''The name of FunctionApp 
-            ssna-func-cca-dev-eastus-wfredact
-            ssna-func-cca-stg-eastus-wfredact
-            ssna-func-cca-prod-eastus-wfredact
-            ''' )
-        SERVICE_BUS_TOPIC_NAME
-        string(name: 'AZURE_LOGICAPP_NAME', defaultValue:'ssna-logicapp-cca-dev-eastus', description: '''The name of LogicApp to deploy
-            ssna-logicapp-cca-dev-eastus
-            ssna-logicapp-cca-stg-eastus
-            ssna-logicapp-cca-prod-eastus
+        string(name: 'REDACT_FUNCTIONAPP_NAME', defaultValue: 'ssna-func-cca-dev-eus-wfredact', description: '''The name of FunctionApp 
+            ssna-func-cca-dev-eus-wfredact
+            ssna-func-cca-stg-eus-wfredact
+            ssna-func-cca-prod-eus-wfredact
             ''' )
         
-        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'ssna-servicebustopics-cca-dev-eastus', description: '''Name of the service bus topic
-            ssna-servicebustopics-cca-dev-eastus
-            ssna-servicebustopics-cca-stg-eastus
-            ssna-servicebustopics-cca-prod-eastus
+        string(name: 'AZURE_LOGICAPP_NAME', defaultValue:'ssna-logiccapp-cca-dev-eastus', description: '''The name of LogicApp to deploy
+            ssna-logiccapp-cca-dev-eastus
+            ssna-logiccapp-cca-stg-eastus
+            ssna-logiccapp-cca-prod-eastus
             ''' )
-
-
+        
+        string(name: 'SERVICE_BUS_TOPIC_NAME', defaultValue:'cca-dev-content', description: '''Name of the service bus topic
+            cca-dev-content
+            cca-stg-content
+            cca-prod-content
+            ''' )
     }
 
     environment {
-        AZURE_CLIENT_ID = credentials('azurerm_client_id')
-        AZURE_CLIENT_SECRET = credentials('azurerm_client_secret')
-        AZURE_TENANT_ID = credentials('azurerm_tenant_id')
+        AZURE_CLIENT_ID = credentials("az_cca_${params.ENVIRONMENT}_client_id")
+        AZURE_CLIENT_SECRET = credentials("az_cca_${params.ENVIRONMENT}_secret_value")
+        AZURE_TENANT_ID = credentials("az_cca_${params.ENVIRONMENT}_tenant_id")
     }
 
     stages {
         stage('Checkout') {
             steps {
                 // checkout scm
-                git branch: 'feature/without_callback', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
+                git branch: 'feature/queue', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
 
             }
         }
@@ -137,22 +135,27 @@ pipeline {
                             echo "CREATED [az-ci-trail-workflow-orchestrator-\${artifact_version}.zip]"
                             curl -v -u deployment:deployment123 --upload-file \
                                 "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" \
-                                "http://74.225.187.237:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                                "http://40.71.34.146:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
                         else
                             artifact_version=$ver
                             echo "Downloading specified artifact version from Nexus..."
-                            curl -v -u nexus-user:nexus@123 -O "http://74.225.187.237:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                            curl -v -u nexus-user:nexus@123 -O "http://40.71.34.146:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
                         fi
                         rm -rf "az-ci-trail-workflow-orchestrator-\${artifact_version}"
                         unzip "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" -d "az-ci-trail-workflow-orchestrator-\${artifact_version}"
 
                         ls -ltr
-                        az logicapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-trail-workflow-orchestrator-\${artifact_version}.zip
+                        az webapp deployment source config-zip -g ${params.RESOURCE_GROUP_NAME} -n ${params.AZURE_LOGICAPP_NAME} --subscription ${params.SUBSCRIPTION} --src az-ci-trail-workflow-orchestrator-\${artifact_version}.zip
                     """
                 }
             }
         }
 
+    }
+    post {
+        success {
+            cleanWs()
+        }
     }
 }
 
