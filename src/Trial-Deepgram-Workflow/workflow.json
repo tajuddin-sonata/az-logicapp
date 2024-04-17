@@ -81,9 +81,9 @@
       "GetLandingContainerMetadata": {
         "type": "Compose",
         "inputs": {
-          "client_id": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client']))",
-          "step": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step']))",
-          "type": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type']))"
+          "client_id": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_client']))",
+          "step": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_step']))",
+          "type": "@toLower(concat(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-ci_media_type']))"
         },
         "runAfter": {
           "HTTPRequestForMetadata": [
@@ -130,25 +130,13 @@
           ]
         },
         "actions": {
-          "CallWFRedact": {
-            "type": "Http",
-            "inputs": {
-              "uri": "$REDACT_FUNC_URL",
-              "method": "POST",
-              "body": "@outputs('InputForRedact')"
-            },
+          "EmptyArray1": {
+            "type": "Compose",
+            "inputs": [],
             "runAfter": {
-              "InputForRedact": [
+              "redaction_input_files": [
                 "SUCCEEDED"
               ]
-            },
-            "limit": {
-              "timeout": "PT30M"
-            },
-            "runtimeConfiguration": {
-              "contentTransfer": {
-                "transferMode": "Chunked"
-              }
             }
           },
           "IfAudioInWorkingFile": {
@@ -584,11 +572,20 @@
               ]
             }
           },
-          "EmptyArray1": {
-            "type": "Compose",
-            "inputs": [],
+          "CallWFRedact": {
+            "type": "HttpWebhook",
+            "inputs": {
+              "subscribe": {
+                "method": "POST",
+                "uri": "$REDACT_FUNC_URL",
+                "body": {
+                  "callbackUrl": "@listCallbackUrl()",
+                  "data": "@outputs('InputForRedact')"
+                }
+              }
+            },
             "runAfter": {
-              "redaction_input_files": [
+              "InputForRedact": [
                 "SUCCEEDED"
               ]
             }
@@ -779,6 +776,10 @@
                 "transferMode": "Chunked"
               }
             }
+          },
+          "EmptyArray": {
+            "type": "Compose",
+            "inputs": []
           },
           "If-metrics": {
             "type": "If",
@@ -1014,10 +1015,6 @@
                 "SUCCEEDED"
               ]
             }
-          },
-          "EmptyArray": {
-            "type": "Compose",
-            "inputs": []
           }
         },
         "else": {
