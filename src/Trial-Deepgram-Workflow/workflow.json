@@ -2034,7 +2034,7 @@
               "asr_config": {
                 "type": "Compose",
                 "inputs": {
-                  "api_key": "89954365f96e90d5a07fcacacb48bd17601ab3be",
+                  "api_key": "34034c0c5418027e8d8fc77e17d872158474ba93",
                   "features": "@outputs('set_transcribe_args_asr_config_typed')"
                 },
                 "runAfter": {
