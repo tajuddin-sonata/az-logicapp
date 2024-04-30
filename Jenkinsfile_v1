@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'GCP-jenkins-worker04'
+    }
 
     parameters{
         choice(name: 'ENVIRONMENT', choices:[
@@ -11,8 +13,8 @@ pipeline {
         string(name: 'VERSION', description: 'Explicit version to deploy (i.e., "v0.1-51-g87b72a"). Leave blank to build latest commit')
 
 
-        string(name: 'SUBSCRIPTION', defaultValue:'67d37eda-76c7-4c34-8503-2df917769cfd', description: ''' select subscription as:
-            67d37eda-76c7-4c34-8503-2df917769cfd
+        string(name: 'SUBSCRIPTION', defaultValue:'3dd867b9-cab3-4661-979f-0e69d467e8f5', description: ''' select subscription as:
+            3dd867b9-cab3-4661-979f-0e69d467e8f5
             6fd0ed8f-99ff-480e-a5ff-f741fb2b8cec
             054168d1-524c-4d69-a9a2-bdf62c2bb47c''')
 
@@ -133,11 +135,11 @@ pipeline {
                             echo "CREATED [az-ci-trail-workflow-orchestrator-\${artifact_version}.zip]"
                             curl -v -u deployment:deployment123 --upload-file \
                                 "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" \
-                                "http://172.190.171.178:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                                "http://40.71.34.146:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
                         else
                             artifact_version=$ver
                             echo "Downloading specified artifact version from Nexus..."
-                            curl -v -u nexus-user:nexus@123 -O "http://172.190.171.178:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
+                            curl -v -u nexus-user:nexus@123 -O "http://40.71.34.146:8081/repository/packages/cca/az-ci-trail-workflow-orchestrator-\${artifact_version}.zip"
                         fi
                         rm -rf "az-ci-trail-workflow-orchestrator-\${artifact_version}"
                         unzip "az-ci-trail-workflow-orchestrator-\${artifact_version}.zip" -d "az-ci-trail-workflow-orchestrator-\${artifact_version}"
