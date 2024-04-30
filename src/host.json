@@ -15,7 +15,7 @@
   "extensions": {
       "workflow": {
          "settings": {
-            "Runtime.Backend.HttpOperation.RequestTimeout": "00:20:00"
+            "Runtime.Backend.HttpWebhookOperation.RequestTimeout": "01:00:00"
          }
       }
    }
