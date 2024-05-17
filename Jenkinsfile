@@ -75,7 +75,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // checkout scm
-                git branch: 'feature/queue', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
+                git branch: 'feature/with_parameter', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
 
             }
         }
@@ -103,13 +103,13 @@ pipeline {
                     echo "redact_func_url: ${redact_func_url}"
                     
                     sh """
-                        cd src/Trial-Deepgram-Workflow/
-                        sed -i 's|\$CONFIGURE_FUNC_URL|${configure_func_url}|g' workflow.json
-                        sed -i 's|\$TRANSCODE_FUNC_URL|${transcode_func_url}|g' workflow.json
-                        sed -i 's|\$TRANSCRIBE_FUNC_URL|${transcribe_func_url}|g' workflow.json
-                        sed -i 's|\$ANALYSE_FUNC_URL|${analyse_func_url}|g' workflow.json
-                        sed -i 's|\$REDACT_FUNC_URL|${redact_func_url}|g' workflow.json
-                        sed -i 's|\$SERVICE_BUS_TOPIC_NAME|${params.SERVICE_BUS_TOPIC_NAME}|g' workflow.json
+                        cd src/
+                        sed -i 's|\$CONFIGURE_FUNC_URL|${configure_func_url}|g' parameters.json
+                        sed -i 's|\$TRANSCODE_FUNC_URL|${transcode_func_url}|g' parameters.json
+                        sed -i 's|\$TRANSCRIBE_FUNC_URL|${transcribe_func_url}|g' parameters.json
+                        sed -i 's|\$ANALYSE_FUNC_URL|${analyse_func_url}|g' parameters.json
+                        sed -i 's|\$REDACT_FUNC_URL|${redact_func_url}|g' parameters.json
+                        sed -i 's|\$SERVICE_BUS_TOPIC_NAME|${params.SERVICE_BUS_TOPIC_NAME}|g' parameters.json
 
                     """
                 }

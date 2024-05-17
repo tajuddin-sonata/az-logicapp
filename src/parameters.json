@@ -1,5 +1,5 @@
 {
-  "INIT-Function": {
+  "function_map-config_sources": {
     "type": "Object",
     "value": {
       "transcode_media": [
@@ -22,7 +22,22 @@
       ]
     }
   },
-  "INIT-bucket_label_tags": {
+  "function_map-url": {
+    "type": "Object",
+    "value": {
+      "configure": "$CONFIGURE_FUNC_URL",
+      "transcode_media": "$TRANSCODE_FUNC_URL",
+      "transcribe_media": "$TRANSCRIBE_FUNC_URL",
+      "analyse_transcript": "$ANALYSE_FUNC_URL",
+      "redact": "$REDACT_FUNC_URL",
+      "process_metadata": ""
+    }
+  },
+  "servicebus_topic_name": {
+    "type": "String",
+    "value": "$SERVICE_BUS_TOPIC_NAME"
+  },
+  "bucket_label_tags": {
     "type": "Object",
     "value": {
       "client": "Ci_client",
@@ -30,7 +45,7 @@
       "type": "Ci_media_type"
     }
   },
-  "INIT-staging_config": {
+  "staging_config": {
     "type": "Object",
     "value": {
       "file_prefix": "staged"
