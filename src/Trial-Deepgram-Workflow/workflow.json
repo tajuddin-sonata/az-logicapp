@@ -2,187 +2,6 @@
   "definition": {
     "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
     "actions": {
-      "LandingFileData": {
-        "type": "Compose",
-        "inputs": {
-          "config_bucket_name": "@{split(split(triggerBody()?['subject'],'/')[4],'-')[0]}-@{split(split(triggerBody()?['subject'],'/')[4],'-')[1]}-@{split(split(triggerBody()?['subject'],'/')[4],'-')[2]}",
-          "content_type": "@triggerBody()?['data']['contentType']",
-          "event_time": "@{triggerBody()?['event_time']}",
-          "filename": "@last(split(triggerBody()?['subject'],'/'))",
-          "full_path": "@triggerBody()?['subject']",
-          "landingcontainername": "@split(triggerBody()?['subject'],'/')[4]",
-          "size": "@triggerBody()?['data']['contentLength']",
-          "storageaccountname": "@last(split(triggerBody()?['topic'],'/'))",
-          "url": "@triggerBody()?['data']['url']",
-          "version": "@{triggerBody()?['data']['eTag']}"
-        },
-        "runAfter": {}
-      },
-      "HTTPRequestForMetadata": {
-        "type": "Http",
-        "inputs": {
-          "uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net/@{outputs('LandingFileData')?['landingcontainername']}?restype=container&comp=metadata",
-          "method": "GET",
-          "headers": {
-            "x-ms-blob-type": "BlockBlob",
-            "x-ms-date": "@{formatDateTime(utcNow(),'r')}",
-            "x-ms-version": "2019-02-02"
-          },
-          "authentication": {
-            "type": "ManagedServiceIdentity",
-            "audience": "https://storage.azure.com"
-          }
-        },
-        "runAfter": {
-          "LandingFileData": [
-            "SUCCEEDED"
-          ]
-        },
-        "runtimeConfiguration": {
-          "contentTransfer": {
-            "transferMode": "Chunked"
-          }
-        }
-      },
-      "context0": {
-        "type": "Compose",
-        "inputs": {
-          "azure_subscription": "@split(appsetting('WEBSITE_OWNER_NAME'),'+')[0]",
-          "azure_location": "@{replace(toLower(appsetting('REGION_NAME')),' ','')}",
-          "workflow_id": "@appsetting('WEBSITE_SITE_NAME')",
-          "execution_id": "@workflow()['run']['name']",
-          "config_bucket_name": "@outputs('LandingFileData')?['config_bucket_name']",
-          "storageaccounturl": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net",
-          "execution_start": "@utcNow()",
-          "client_id": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client'])",
-          "step": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step'])",
-          "type": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type'])",
-          "trigger_file": {
-            "bucket_name": "@outputs('LandingFileData')?['landingcontainername']",
-            "full_path": "@outputs('LandingFileData')?['filename']",
-            "name": "@outputs('LandingFileData')?['filename']",
-            "version": "@outputs('LandingFileData')?['version']",
-            "size": "@outputs('LandingFileData')?['size']",
-            "content_type": "@outputs('LandingFileData')?['content_type']",
-            "upload_timestamp": "@outputs('LandingFileData')?['event_time']"
-          }
-        },
-        "runAfter": {
-          "HTTPRequestForMetadata": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "HTTPCall-WFConfigure": {
-        "type": "Http",
-        "inputs": {
-          "uri": "@parameters('function_map-url')?['configure']",
-          "method": "POST",
-          "body": {
-            "context": "@outputs('context0')",
-            "input_files": {
-              "source_file": {
-                "bucket_name": "@{outputs('context0')?['trigger_file']['bucket_name']}",
-                "full_path": "@{outputs('context0')?['trigger_file']['full_path']}",
-                "version": "@{outputs('context0')?['trigger_file']['version']}",
-                "uploaded": "@{outputs('context0')?['trigger_file']['upload_timestamp']}"
-              }
-            },
-            "function_config": {
-              "config_bucket_name": "@outputs('context0')?['config_bucket_name']",
-              "label_tags": "@parameters('bucket_label_tags')",
-              "functions": "@parameters('function_map-config_sources')"
-            }
-          }
-        },
-        "runAfter": {
-          "context0": [
-            "SUCCEEDED"
-          ]
-        },
-        "runtimeConfiguration": {
-          "contentTransfer": {
-            "transferMode": "Chunked"
-          }
-        }
-      },
-      "buckets": {
-        "type": "Compose",
-        "inputs": {
-          "landing": "@outputs('context0')?['trigger_file']['bucket_name']",
-          "staging": "@body('HTTPCall-WFConfigure')?['client_buckets']['staging']",
-          "content": "@body('HTTPCall-WFConfigure')?['client_buckets']['content']"
-        },
-        "runAfter": {
-          "context": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "config": {
-        "type": "Compose",
-        "inputs": "@body('HTTPCall-WFConfigure')?['client_config']",
-        "runAfter": {
-          "buckets": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "context": {
-        "type": "Compose",
-        "inputs": {
-          "azure_subscription": "@split(appsetting('WEBSITE_OWNER_NAME'),'+')[0]",
-          "azure_location": "@{replace(toLower(appsetting('REGION_NAME')),' ','')}",
-          "workflow_id": "@appsetting('WEBSITE_SITE_NAME')",
-          "execution_id": "@workflow()['run']['name']",
-          "config_bucket_name": "@outputs('LandingFileData')?['config_bucket_name']",
-          "storageaccounturl": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net",
-          "execution_start": "@utcNow()",
-          "client_id": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client'])",
-          "step": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step'])",
-          "type": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type'])",
-          "trigger_file": {
-            "bucket_name": "@outputs('LandingFileData')?['landingcontainername']",
-            "full_path": "@outputs('LandingFileData')?['filename']",
-            "name": "@outputs('LandingFileData')?['filename']",
-            "version": "@outputs('LandingFileData')?['version']",
-            "size": "@outputs('LandingFileData')?['size']",
-            "content_type": "@outputs('LandingFileData')?['content_type']",
-            "upload_timestamp": "@outputs('LandingFileData')?['event_time']"
-          },
-          "interaction_id": "@body('HTTPCall-WFConfigure')?['interaction_id']"
-        },
-        "runAfter": {
-          "HTTPCall-WFConfigure": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "staging_config": {
-        "type": "Compose",
-        "inputs": {
-          "file_prefix": "staged",
-          "bucket_name": "@outputs('buckets')?['staging']",
-          "folder_path": "@body('HTTPCall-WFConfigure')?['staging_folder_path']"
-        },
-        "runAfter": {
-          "config": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "content_config": {
-        "type": "Compose",
-        "inputs": {
-          "bucket_name": "@outputs('buckets')?['content']",
-          "folder_path": "@body('HTTPCall-WFConfigure')?['content_folder_path']"
-        },
-        "runAfter": {
-          "staging_config": [
-            "SUCCEEDED"
-          ]
-        }
-      },
       "CopyBlobToStagingContainer": {
         "type": "ServiceProvider",
         "inputs": {
@@ -205,29 +24,108 @@
           ]
         }
       },
-      "staged_media_obj": {
+      "EmptyArray": {
         "type": "Compose",
-        "inputs": {
-          "bucket": "@outputs('CopyBlobToStagingContainer')?['body']['containerName']",
-          "generation": "@json(outputs('CopyBlobToStagingContainer')?['body']['eTag'])",
-          "object": "@outputs('CopyBlobToStagingContainer')?['body']['name']",
-          "uploaded_at": "@outputs('CopyBlobToStagingContainer')?['body']['creationTime']"
-        },
+        "inputs": [],
         "runAfter": {
-          "CopyBlobToStagingContainer": [
+          "tempfilearray": [
             "SUCCEEDED"
           ]
         }
       },
-      "tempfile": {
-        "type": "Compose",
-        "inputs": {
-          "tempfile": ""
+      "For_each": {
+        "type": "Foreach",
+        "foreach": "@outputs('List_all_the_blobs_using_path')?['body']['blobs']",
+        "actions": {
+          "Delete_a_blob": {
+            "type": "ServiceProvider",
+            "inputs": {
+              "parameters": {
+                "containerName": "@outputs('staging_config')?['bucket_name']",
+                "blobName": "@outputs('StagingBlobName')?['BlobName']"
+              },
+              "serviceProviderConfiguration": {
+                "connectionName": "AzureBlob",
+                "operationId": "deleteBlob",
+                "serviceProviderId": "/serviceProviders/AzureBlob"
+              }
+            },
+            "runAfter": {
+              "StagingBlobName": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "StagingBlobName": {
+            "type": "Compose",
+            "inputs": {
+              "BlobName": "@items('For_each')?['name']"
+            }
+          }
         },
         "runAfter": {
-          "staged_media_obj": [
+          "List_all_the_blobs_using_path": [
             "SUCCEEDED"
           ]
+        }
+      },
+      "HTTPCall-WFConfigure": {
+        "type": "Http",
+        "inputs": {
+          "uri": "@parameters('function_map-url')?['configure']",
+          "method": "POST",
+          "body": {
+            "context": "@outputs('context0')",
+            "function_config": {
+              "config_bucket_name": "@outputs('context0')?['config_bucket_name']",
+              "functions": "@parameters('function_map-config_sources')",
+              "label_tags": "@parameters('bucket_label_tags')"
+            },
+            "input_files": {
+              "source_file": {
+                "bucket_name": "@{outputs('context0')?['trigger_file']['bucket_name']}",
+                "full_path": "@{outputs('context0')?['trigger_file']['full_path']}",
+                "uploaded": "@{outputs('context0')?['trigger_file']['upload_timestamp']}",
+                "version": "@{outputs('context0')?['trigger_file']['version']}"
+              }
+            }
+          }
+        },
+        "runAfter": {
+          "context0": [
+            "SUCCEEDED"
+          ]
+        },
+        "runtimeConfiguration": {
+          "contentTransfer": {
+            "transferMode": "Chunked"
+          }
+        }
+      },
+      "HTTPRequestForMetadata": {
+        "type": "Http",
+        "inputs": {
+          "uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net/@{outputs('LandingFileData')?['landingcontainername']}?restype=container&comp=metadata",
+          "method": "GET",
+          "headers": {
+            "x-ms-blob-type": "BlockBlob",
+            "x-ms-date": "@{formatDateTime(utcNow(),'r')}",
+            "x-ms-version": "2019-02-02"
+          },
+          "authentication": {
+            "audience": "https://storage.azure.com",
+            "type": "ManagedServiceIdentity"
+          }
+        },
+        "runAfter": {
+          "LandingFileData": [
+            "SUCCEEDED"
+          ]
+        },
+        "runtimeConfiguration": {
+          "contentTransfer": {
+            "transferMode": "Chunked"
+          }
         }
       },
       "IfTypeIsAudioVideoChatTranscript": {
@@ -376,31 +274,1519 @@
           ]
         }
       },
-      "working_files1": {
-        "type": "Compose",
-        "inputs": "@removeProperty(union(outputs('ifaudiotype'),outputs('ifvideotype'),outputs('iftranscripttype')),'tempfile')",
-        "runAfter": {
-          "IfTypeIsAudioVideoChatTranscript": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "staged_files1": {
+      "LandingFileData": {
         "type": "Compose",
         "inputs": {
-          "staged_media": "@outputs('staged_media_obj')"
+          "config_bucket_name": "@{split(split(triggerBody()?['subject'],'/')[4],'-')[0]}-@{split(split(triggerBody()?['subject'],'/')[4],'-')[1]}-@{split(split(triggerBody()?['subject'],'/')[4],'-')[2]}",
+          "content_type": "@triggerBody()?['data']['contentType']",
+          "event_time": "@{triggerBody()?['event_time']}",
+          "filename": "@last(split(triggerBody()?['subject'],'/'))",
+          "full_path": "@triggerBody()?['subject']",
+          "landingcontainername": "@split(triggerBody()?['subject'],'/')[4]",
+          "size": "@triggerBody()?['data']['contentLength']",
+          "storageaccountname": "@last(split(triggerBody()?['topic'],'/'))",
+          "url": "@triggerBody()?['data']['url']",
+          "version": "@{triggerBody()?['data']['eTag']}"
+        },
+        "runAfter": {}
+      },
+      "List_all_the_blobs_using_path": {
+        "type": "ServiceProvider",
+        "inputs": {
+          "parameters": {
+            "containerName": "@outputs('staging_config')?['bucket_name']",
+            "blobNamePrefix": "@{outputs('staging_config')?['folder_path']}/"
+          },
+          "serviceProviderConfiguration": {
+            "connectionName": "AzureBlob",
+            "operationId": "listBlobs",
+            "serviceProviderId": "/serviceProviders/AzureBlob"
+          }
         },
         "runAfter": {
-          "working_files1": [
+          "Send_message_to_Service_Bus": [
             "SUCCEEDED"
           ]
         }
       },
-      "tempfilearray": {
-        "type": "Compose",
-        "inputs": {},
+      "Migrate-WorkingFilesData": {
+        "type": "If",
+        "expression": {
+          "or": [
+            {
+              "not": {
+                "equals": [
+                  "@outputs('working_files')",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        "actions": {
+          "IfAudioInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "audio"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyAudioBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('audiocopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('audiocopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('audiocopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('audiocopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "audiocopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "audio-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "audio": {
+                    "bucket": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyAudioBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyAudioBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "audio-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyAudioBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyAudioBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyAudioBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "audio",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyAudioBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "audio-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "audiocopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/audio.@{last(split(outputs('working_files')?['audio']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['audio']['object']",
+                  "StagingContainer": "@outputs('working_files')?['audio']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "IfMetricsInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "metrics"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyMetricsBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('metricscopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('metricscopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('metricscopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('metricscopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "metricscopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "metrics-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "metrics": {
+                    "bucket": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyMetricsBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyMetricsBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "metrics-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyMetricsBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyMetricsBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyMetricsBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "metrics",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyMetricsBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "metrics-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "metricscopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/metrics.@{last(split(outputs('working_files')?['metrics']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['metrics']['object']",
+                  "StagingContainer": "@outputs('working_files')?['metrics']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "IfNLPInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "nlp"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyNLPBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('nlpcopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('nlpcopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('nlpcopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('nlpcopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "nlpcopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "nlp-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "nlp": {
+                    "bucket": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyNLPBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyNLPBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "nlp-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyNLPBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyNLPBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyNLPBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "nlp",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyNLPBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "nlp-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "nlpcopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/nlp.@{last(split(outputs('working_files')?['nlp']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['nlp']['object']",
+                  "StagingContainer": "@outputs('working_files')?['nlp']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "IfTranscriptInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "transcript"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyTranscriptBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('transcriptcopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('transcriptcopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('transcriptcopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('transcriptcopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "transcriptcopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "transcript-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "transcript": {
+                    "bucket": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyTranscriptBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "transcript-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "transcript",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyTranscriptBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "transcript-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "transcriptcopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/transcript.@{last(split(outputs('working_files')?['transcript']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['transcript']['object']",
+                  "StagingContainer": "@outputs('working_files')?['transcript']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "IfVideoInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "video"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyVideoBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('videocopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('videocopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('videocopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('videocopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "videocopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "video-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "video": {
+                    "bucket": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyVideoBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyVideoBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "video-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyVideoBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyVideoBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyVideoBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "video",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyVideoBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "video-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "videocopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/video.@{last(split(outputs('working_files')?['video']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['video']['object']",
+                  "StagingContainer": "@outputs('working_files')?['video']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "IfWaveformInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files')",
+                    "waveform"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "CopyWaveformBlobFromStagingToContent": {
+                "type": "ServiceProvider",
+                "inputs": {
+                  "parameters": {
+                    "sourceContainerName": "@outputs('waveformcopyinput')?['StagingContainer']",
+                    "sourceBlobName": "@outputs('waveformcopyinput')?['StagingBlobPath']",
+                    "destinationContainerName": "@outputs('waveformcopyinput')?['ContentContainer']",
+                    "destinationBlobName": "@outputs('waveformcopyinput')?['ContentPath']",
+                    "overrideIfExists": true
+                  },
+                  "serviceProviderConfiguration": {
+                    "connectionName": "AzureBlob",
+                    "operationId": "copyBlob",
+                    "serviceProviderId": "/serviceProviders/AzureBlob"
+                  }
+                },
+                "runAfter": {
+                  "waveformcopyinput": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "waveform-contentfile": {
+                "type": "Compose",
+                "inputs": {
+                  "waveform": {
+                    "bucket": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['containerName']",
+                    "generation": "@json(outputs('CopyWaveformBlobFromStagingToContent')?['body']['eTag'])",
+                    "object": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
+                    "uploaded_at": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['creationTime']"
+                  }
+                },
+                "runAfter": {
+                  "CopyWaveformBlobFromStagingToContent": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "waveform-filelist": {
+                "type": "Compose",
+                "inputs": {
+                  "file_gen": "@json(outputs('CopyWaveformBlobFromStagingToContent')?['body']['eTag'])",
+                  "file_name": "@first(split(last(split(outputs('CopyWaveformBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
+                  "file_name_ext": "@last(split(outputs('CopyWaveformBlobFromStagingToContent')?['body']['name'],'/'))",
+                  "file_type": "waveform",
+                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyWaveformBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
+                },
+                "runAfter": {
+                  "waveform-contentfile": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "waveformcopyinput": {
+                "type": "Compose",
+                "inputs": {
+                  "ContentContainer": "@outputs('buckets')?['content']",
+                  "ContentPath": "@{outputs('content_config')?['folder_path']}/waveform.@{last(split(outputs('working_files')?['waveform']['object'],'.'))}",
+                  "StagingBlobPath": "@outputs('working_files')?['waveform']['object']",
+                  "StagingContainer": "@outputs('working_files')?['waveform']['bucket']"
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            }
+          },
+          "content_files_audio": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('audio-contentfile'),null),outputs('tempfile'),outputs('audio-contentfile'))",
+            "runAfter": {
+              "IfAudioInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "content_files_metrics": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('metrics-contentfile'),null),outputs('tempfile'),outputs('metrics-contentfile'))",
+            "runAfter": {
+              "IfMetricsInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "content_files_nlp": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('nlp-contentfile'),null),outputs('tempfile'),outputs('nlp-contentfile'))",
+            "runAfter": {
+              "IfNLPInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "content_files_transcript": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('transcript-contentfile'),null),outputs('tempfile'),outputs('transcript-contentfile'))",
+            "runAfter": {
+              "IfTranscriptInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "content_files_video": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('video-contentfile'),null),outputs('tempfile'),outputs('video-contentfile'))",
+            "runAfter": {
+              "IfVideoInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "content_files_waveform": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('waveform-contentfile'),null),outputs('tempfile'),outputs('waveform-contentfile'))",
+            "runAfter": {
+              "IfWaveformInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-audio": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('audio-filelist'),null),outputs('tempfilearray'),outputs('audio-filelist'))",
+            "runAfter": {
+              "content_files_audio": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-metrics": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('metrics-filelist'),null),outputs('tempfilearray'),outputs('metrics-filelist'))",
+            "runAfter": {
+              "content_files_metrics": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-nlp": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('nlp-filelist'),null),outputs('tempfilearray'),outputs('nlp-filelist'))",
+            "runAfter": {
+              "content_files_nlp": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-transcript": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('transcript-filelist'),null),outputs('tempfilearray'),outputs('transcript-filelist'))",
+            "runAfter": {
+              "content_files_transcript": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-video": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('video-filelist'),null),outputs('tempfilearray'),outputs('video-filelist'))",
+            "runAfter": {
+              "content_files_video": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "filelist-waveform": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('waveform-filelist'),null),outputs('tempfilearray'),outputs('waveform-filelist'))",
+            "runAfter": {
+              "content_files_waveform": [
+                "SUCCEEDED"
+              ]
+            }
+          }
+        },
+        "else": {
+          "actions": {}
+        },
         "runAfter": {
-          "tempfile": [
+          "working_files": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "Send_message_to_Service_Bus": {
+        "type": "ServiceProvider",
+        "inputs": {
+          "parameters": {
+            "entityName": "@parameters('servicebus_topic_name')",
+            "message": {
+              "contentData": "@outputs('encoded_message')"
+            }
+          },
+          "serviceProviderConfiguration": {
+            "connectionName": "serviceBus",
+            "operationId": "sendMessage",
+            "serviceProviderId": "/serviceProviders/serviceBus"
+          }
+        },
+        "runAfter": {
+          "encoded_message": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "buckets": {
+        "type": "Compose",
+        "inputs": {
+          "content": "@body('HTTPCall-WFConfigure')?['client_buckets']['content']",
+          "landing": "@outputs('context0')?['trigger_file']['bucket_name']",
+          "staging": "@body('HTTPCall-WFConfigure')?['client_buckets']['staging']"
+        },
+        "runAfter": {
+          "context": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "c": {
+        "type": "Compose",
+        "inputs": {
+          "files": "@outputs('files')",
+          "media_info": "@outputs('media_info')"
+        },
+        "runAfter": {
+          "files": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "config": {
+        "type": "Compose",
+        "inputs": "@body('HTTPCall-WFConfigure')?['client_config']",
+        "runAfter": {
+          "buckets": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "config.redact.CI_REDACT-redact": {
+        "type": "If",
+        "expression": {
+          "or": [
+            {
+              "equals": [
+                "@outputs('config')?['redact']['CI_REDACT']",
+                true
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "AudioInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files4')",
+                    "audio"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "redactaudioinput": {
+                "type": "Compose",
+                "inputs": {
+                  "audio": {
+                    "bucket_name": "@outputs('working_files4')?['audio']['bucket']",
+                    "full_path": "@outputs('working_files4')?['audio']['object']",
+                    "version": "@outputs('working_files4')?['audio']['generation']"
+                  }
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            },
+            "runAfter": {
+              "redaction_input_files-nlp-transcript": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "HTTPCall-WFRedact": {
+            "type": "HttpWebhook",
+            "inputs": {
+              "subscribe": {
+                "method": "POST",
+                "uri": "@parameters('function_map-url')?['redact']",
+                "body": {
+                  "callbackUrl": "@listCallbackUrl()",
+                  "data": "@outputs('InputForRedact')"
+                }
+              }
+            },
+            "runAfter": {
+              "InputForRedact": [
+                "SUCCEEDED"
+              ]
+            },
+            "limit": {
+              "timeout": "PT2H"
+            }
+          },
+          "IfHTTPCall-WFRedactIsSuccess": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "equals": [
+                    "@body('HTTPCall-WFRedact')?['status']",
+                    "success"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@body('HTTPCall-WFRedact')?['status_code']",
+                    200
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "If_redacted_audio": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFRedact')?['staged_files']",
+                        "redacted_audio"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_audio_obj1": {
+                    "type": "Compose",
+                    "inputs": {
+                      "audio": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['uploaded']"
+                      }
+                    },
+                    "runAfter": {
+                      "staged_redacted_audio_obj": [
+                        "SUCCEEDED"
+                      ]
+                    }
+                  },
+                  "staged_redacted_audio_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "redacted_audio": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['uploaded']"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "If_redacted_nlp": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFRedact')?['staged_files']",
+                        "redacted_nlp"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_nlp_obj1": {
+                    "type": "Compose",
+                    "inputs": {
+                      "nlp": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['uploaded']"
+                      }
+                    },
+                    "runAfter": {
+                      "staged_redacted_nlp_obj": [
+                        "SUCCEEDED"
+                      ]
+                    }
+                  },
+                  "staged_redacted_nlp_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "redacted_nlp": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['uploaded']"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "If_redacted_transcript": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFRedact')?['staged_files']",
+                        "redacted_transcript"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_redacted_transcript_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "redacted_transcript": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['uploaded']"
+                      }
+                    }
+                  },
+                  "staged_transcript_obj1": {
+                    "type": "Compose",
+                    "inputs": {
+                      "transcript": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['uploaded']"
+                      }
+                    },
+                    "runAfter": {
+                      "staged_redacted_transcript_obj": [
+                        "SUCCEEDED"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "If_redacted_video": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFRedact')?['staged_files']",
+                        "redacted_video"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_redacted_video_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "redacted_video": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['uploaded']"
+                      }
+                    }
+                  },
+                  "staged_video_obj1": {
+                    "type": "Compose",
+                    "inputs": {
+                      "video": {
+                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['version'])",
+                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['uploaded']"
+                      }
+                    },
+                    "runAfter": {
+                      "staged_redacted_video_obj": [
+                        "SUCCEEDED"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "staged_files.redacted_audio": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_redacted_audio_obj'),null),outputs('tempfile'),outputs('staged_redacted_audio_obj'))",
+                "runAfter": {
+                  "If_redacted_audio": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_files.redacted_nlp": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_redacted_nlp_obj'),null),outputs('tempfile'),outputs('staged_redacted_nlp_obj'))",
+                "runAfter": {
+                  "If_redacted_nlp": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_files.redacted_transcript": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_redacted_transcript_obj'),null),outputs('tempfile'),outputs('staged_redacted_transcript_obj'))",
+                "runAfter": {
+                  "If_redacted_transcript": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_files.redacted_video": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_redacted_video_obj'),null),outputs('tempfile'),outputs('staged_redacted_video_obj'))",
+                "runAfter": {
+                  "If_redacted_video": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "working_files.audio": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_audio_obj1'),null),outputs('tempfile'),outputs('staged_audio_obj1'))",
+                "runAfter": {
+                  "staged_files.redacted_audio": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "working_files.nlp": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_nlp_obj1'),null),outputs('tempfile'),outputs('staged_nlp_obj1'))",
+                "runAfter": {
+                  "staged_files.redacted_nlp": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "working_files.transcript1": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_transcript_obj1'),null),outputs('tempfile'),outputs('staged_transcript_obj1'))",
+                "runAfter": {
+                  "staged_files.redacted_transcript": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "working_files.video": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_video_obj1'),null),outputs('tempfile'),outputs('staged_video_obj1'))",
+                "runAfter": {
+                  "staged_files.redacted_video": [
+                    "SUCCEEDED"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Terminate3": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Failed",
+                    "runError": {
+                      "code": "500",
+                      "message": "@body('HTTPCall-WFRedact')?['message']"
+                    }
+                  }
+                }
+              }
+            },
+            "runAfter": {
+              "HTTPCall-WFRedact": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "InputForRedact": {
+            "type": "Compose",
+            "inputs": {
+              "context": "@outputs('context')",
+              "function_config": {
+                "redact_config": {
+                  "types_to_redact": "@if(contains(outputs('config')?['redact']['CI_REDACT_OPTIONS'],'types_to_redact'),outputs('config')['redact']['CI_REDACT_OPTIONS']['types_to_redact'],outputs('EmptyArray'))"
+                },
+                "signing_account": "@outputs('config')?['redact']['CI_SA_EMAIL']"
+              },
+              "input_files": "@outputs('redaction_input_files')",
+              "staging_config": "@outputs('staging_config')"
+            },
+            "runAfter": {
+              "redaction_input_files": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "VideoInWorkingFiles": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "contains": [
+                    "@outputs('working_files4')",
+                    "video"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "redactvideoinput": {
+                "type": "Compose",
+                "inputs": {
+                  "video": {
+                    "bucket_name": "@outputs('working_files4')?['video']['bucket']",
+                    "full_path": "@outputs('working_files4')?['video']['object']",
+                    "version": "@outputs('working_files4')?['video']['generation']"
+                  }
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            },
+            "runAfter": {
+              "redaction_input_files.audio": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "redaction_input_files": {
+            "type": "Compose",
+            "inputs": "@removeProperty(union(outputs('redaction_input_files-nlp-transcript'),outputs('redaction_input_files.audio'),outputs('redaction_input_files.video')),'tempfile')",
+            "runAfter": {
+              "redaction_input_files.video": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "redaction_input_files-nlp-transcript": {
+            "type": "Compose",
+            "inputs": {
+              "nlp": {
+                "bucket_name": "@outputs('working_files4')?['nlp']['bucket']",
+                "full_path": "@outputs('working_files4')?['nlp']['object']",
+                "version": "@outputs('working_files4')?['nlp']['generation']"
+              },
+              "transcript": {
+                "bucket_name": "@outputs('working_files4')?['transcript']['bucket']",
+                "full_path": "@outputs('working_files4')?['transcript']['object']",
+                "version": "@outputs('working_files4')?['transcript']['generation']"
+              }
+            }
+          },
+          "redaction_input_files.audio": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('redactaudioinput'),null),outputs('tempfile'),outputs('redactaudioinput'))",
+            "runAfter": {
+              "AudioInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "redaction_input_files.video": {
+            "type": "Compose",
+            "inputs": "@if(equals(outputs('redactvideoinput'),null),outputs('tempfile'),outputs('redactvideoinput'))",
+            "runAfter": {
+              "VideoInWorkingFiles": [
+                "SUCCEEDED"
+              ]
+            }
+          }
+        },
+        "else": {
+          "actions": {}
+        },
+        "runAfter": {
+          "working_files4": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "config.transcribe_media.CI_TRANSCRIPTION-analyse": {
+        "type": "If",
+        "expression": {
+          "or": [
+            {
+              "equals": [
+                "@outputs('config')?['transcribe_media']['CI_TRANSCRIPTION']",
+                true
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "HTTPCall-WFAnalyse": {
+            "type": "HttpWebhook",
+            "inputs": {
+              "subscribe": {
+                "method": "POST",
+                "uri": "@parameters('function_map-url')?['analyse_transcript']",
+                "body": {
+                  "callbackUrl": "@listCallbackUrl()",
+                  "data": "@outputs('InputForAnalyse')"
+                }
+              }
+            },
+            "runAfter": {
+              "InputForAnalyse": [
+                "SUCCEEDED"
+              ]
+            },
+            "limit": {
+              "timeout": "PT1H"
+            }
+          },
+          "IfHTTPCall-WFAnalyseIsSuccess": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "equals": [
+                    "@body('HTTPCall-WFAnalyse')?['status']",
+                    "success"
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "If-metrics": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
+                        "metrics"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_working_metrics_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "metrics": {
+                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['version'])",
+                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['uploaded']"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "If-nlp": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
+                        "nlp"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_working_nlp_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "nlp": {
+                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['version'])",
+                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['uploaded']"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "If-spellchecked_transcript": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "contains": [
+                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
+                        "spellchecked_transcript"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_spellchecked_transcript_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "spellchecked_transcript": {
+                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['version'])",
+                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['uploaded']"
+                      }
+                    }
+                  },
+                  "working_transcript_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "transcript": {
+                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['version'])",
+                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['uploaded']"
+                      }
+                    },
+                    "runAfter": {
+                      "staged_spellchecked_transcript_obj": [
+                        "SUCCEEDED"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
+              },
+              "staged_files.spellchecked_transcript": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_spellchecked_transcript_obj'),null),outputs('tempfile'),outputs('staged_spellchecked_transcript_obj'))",
+                "runAfter": {
+                  "If-spellchecked_transcript": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_working_files.metrics": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_working_metrics_obj'),null),outputs('tempfile'),outputs('staged_working_metrics_obj'))",
+                "runAfter": {
+                  "If-metrics": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_working_files.nlp": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_working_nlp_obj'),null),outputs('tempfile'),outputs('staged_working_nlp_obj'))",
+                "runAfter": {
+                  "If-nlp": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "working_files.transcript": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('working_transcript_obj'),null),outputs('tempfile'),outputs('working_transcript_obj'))",
+                "runAfter": {
+                  "staged_files.spellchecked_transcript": [
+                    "SUCCEEDED"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Terminate2": {
+                  "type": "Terminate",
+                  "inputs": {
+                    "runStatus": "Failed",
+                    "runError": {
+                      "code": "500",
+                      "message": "@body('HTTPCall-WFAnalyse')?['message']"
+                    }
+                  }
+                }
+              }
+            },
+            "runAfter": {
+              "HTTPCall-WFAnalyse": [
+                "SUCCEEDED"
+              ]
+            }
+          },
+          "InputForAnalyse": {
+            "type": "Compose",
+            "inputs": {
+              "context": "@outputs('context')",
+              "function_config": {
+                "nlp_config": {
+                  "nlp_ignore": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'nlp_ignore'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['nlp_ignore'],outputs('EmptyArray'))",
+                  "rule_patterns": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'rule_patterns'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['rule_patterns'],outputs('EmptyArray'))"
+                },
+                "spellcheck_config": {
+                  "add_words": "@if(contains(outputs('config')?['analyse_transcript'],'CI_SPELLCHECK_OPTIONS'),outputs('config')?['analyse_transcript']['CI_SPELLCHECK_OPTIONS']['add_words'],outputs('EmptyArray'))"
+                }
+              },
+              "input_files": {
+                "transcript": {
+                  "bucket_name": "@outputs('staged_files3')?['transcript']['bucket']",
+                  "full_path": "@outputs('staged_files3')?['transcript']['object']",
+                  "version": "@outputs('staged_files3')?['transcript']['generation']"
+                }
+              },
+              "staging_config": "@outputs('staging_config')"
+            }
+          }
+        },
+        "else": {
+          "actions": {}
+        },
+        "runAfter": {
+          "working_files3": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "content_config": {
+        "type": "Compose",
+        "inputs": {
+          "bucket_name": "@outputs('buckets')?['content']",
+          "folder_path": "@body('HTTPCall-WFConfigure')?['content_folder_path']"
+        },
+        "runAfter": {
+          "staging_config": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "content_files": {
+        "type": "Compose",
+        "inputs": "@removeProperty(union(outputs('content_files_audio'),outputs('content_files_metrics'),outputs('content_files_nlp'),outputs('content_files_transcript'),outputs('content_files_video'),outputs('content_files_waveform')),'tempfile')",
+        "runAfter": {
+          "Migrate-WorkingFilesData": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "context": {
+        "type": "Compose",
+        "inputs": {
+          "azure_location": "@{replace(toLower(appsetting('REGION_NAME')),' ','')}",
+          "azure_subscription": "@split(appsetting('WEBSITE_OWNER_NAME'),'+')[0]",
+          "client_id": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client'])",
+          "config_bucket_name": "@outputs('LandingFileData')?['config_bucket_name']",
+          "execution_id": "@workflow()['run']['name']",
+          "execution_start": "@utcNow()",
+          "interaction_id": "@body('HTTPCall-WFConfigure')?['interaction_id']",
+          "step": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step'])",
+          "storageaccounturl": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net",
+          "trigger_file": {
+            "bucket_name": "@outputs('LandingFileData')?['landingcontainername']",
+            "content_type": "@outputs('LandingFileData')?['content_type']",
+            "full_path": "@outputs('LandingFileData')?['filename']",
+            "name": "@outputs('LandingFileData')?['filename']",
+            "size": "@outputs('LandingFileData')?['size']",
+            "upload_timestamp": "@outputs('LandingFileData')?['event_time']",
+            "version": "@outputs('LandingFileData')?['version']"
+          },
+          "type": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type'])",
+          "workflow_id": "@appsetting('WEBSITE_SITE_NAME')"
+        },
+        "runAfter": {
+          "HTTPCall-WFConfigure": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "context0": {
+        "type": "Compose",
+        "inputs": {
+          "azure_location": "@{replace(toLower(appsetting('REGION_NAME')),' ','')}",
+          "azure_subscription": "@split(appsetting('WEBSITE_OWNER_NAME'),'+')[0]",
+          "client_id": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_client'])",
+          "config_bucket_name": "@outputs('LandingFileData')?['config_bucket_name']",
+          "execution_id": "@workflow()['run']['name']",
+          "execution_start": "@utcNow()",
+          "step": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_step'])",
+          "storageaccounturl": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net",
+          "trigger_file": {
+            "bucket_name": "@outputs('LandingFileData')?['landingcontainername']",
+            "content_type": "@outputs('LandingFileData')?['content_type']",
+            "full_path": "@outputs('LandingFileData')?['filename']",
+            "name": "@outputs('LandingFileData')?['filename']",
+            "size": "@outputs('LandingFileData')?['size']",
+            "upload_timestamp": "@outputs('LandingFileData')?['event_time']",
+            "version": "@outputs('LandingFileData')?['version']"
+          },
+          "type": "@toLower(outputs('HTTPRequestForMetadata')?['headers']['x-ms-meta-Ci_media_type'])",
+          "workflow_id": "@appsetting('WEBSITE_SITE_NAME')"
+        },
+        "runAfter": {
+          "HTTPRequestForMetadata": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "encoded_message": {
+        "type": "Compose",
+        "inputs": "@base64(outputs('raw_message'))",
+        "runAfter": {
+          "raw_message": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "file_list": {
+        "type": "Compose",
+        "inputs": "@json(replace(concat('[',outputs('filelist-audio'),',',outputs('filelist-metrics'),',',outputs('filelist-nlp'),',',outputs('filelist-transcript'),',',outputs('filelist-video'),',',outputs('filelist-waveform'),',',outputs('tempfilearray'),']'),',{}',''))",
+        "runAfter": {
+          "content_files": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "files": {
+        "type": "Compose",
+        "inputs": {
+          "content": "@outputs('content_files')",
+          "staged": "@outputs('staged_files')",
+          "working": "@outputs('working_files')"
+        },
+        "runAfter": {
+          "For_each": [
             "SUCCEEDED"
           ]
         }
@@ -436,6 +1822,189 @@
           ]
         },
         "actions": {
+          "config.transcribe_media.CI_TRANSCRIPTION-transcribe": {
+            "type": "If",
+            "expression": {
+              "or": [
+                {
+                  "equals": [
+                    "@outputs('config')?['transcribe_media']['CI_TRANSCRIPTION']",
+                    true
+                  ]
+                }
+              ]
+            },
+            "actions": {
+              "HTTPCall-WFTranscribe": {
+                "type": "HttpWebhook",
+                "inputs": {
+                  "subscribe": {
+                    "method": "POST",
+                    "uri": "@parameters('function_map-url')?['transcribe_media']",
+                    "body": {
+                      "callbackUrl": "@listCallbackUrl()",
+                      "data": "@outputs('InputForTranscribe')"
+                    }
+                  }
+                },
+                "runAfter": {
+                  "InputForTranscribe": [
+                    "SUCCEEDED"
+                  ]
+                },
+                "limit": {
+                  "timeout": "PT30M"
+                }
+              },
+              "IfHTTPCall-WFTranscribe-Is-Success": {
+                "type": "If",
+                "expression": {
+                  "or": [
+                    {
+                      "equals": [
+                        "@body('HTTPCall-WFTranscribe')?['status']",
+                        "success"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "staged_transcript_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "transcript": {
+                        "bucket": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['bucket_name']",
+                        "generation": "@json(outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['version'])",
+                        "object": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['full_path']",
+                        "uploaded_at": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['uploaded']"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {
+                    "Terminate1": {
+                      "type": "Terminate",
+                      "inputs": {
+                        "runStatus": "Failed",
+                        "runError": {
+                          "code": "500",
+                          "message": "@body('HTTPCall-WFTranscribe')?['message']"
+                        }
+                      }
+                    }
+                  }
+                },
+                "runAfter": {
+                  "HTTPCall-WFTranscribe": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "InputForTranscribe": {
+                "type": "Compose",
+                "inputs": {
+                  "context": "@outputs('context')",
+                  "function_config": {
+                    "asr_config": "@outputs('asr_config')",
+                    "signing_account": "@outputs('config')?['transcode_media']['CI_SA_EMAIL']",
+                    "transcript_config": "@outputs('transcript_config')"
+                  },
+                  "input_files": {
+                    "audio": "@outputs('input_file')"
+                  },
+                  "staging_config": "@outputs('staging_config')"
+                },
+                "runAfter": {
+                  "input_file": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "asr_config": {
+                "type": "Compose",
+                "inputs": {
+                  "api_key": "4868e4f32ae4a3caba38f387e6b26220c4c46134",
+                  "features": "@outputs('asr_config_typed')"
+                },
+                "runAfter": {
+                  "asr_config_typed": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "asr_config_typed": {
+                "type": "Compose",
+                "inputs": "@if(contains(outputs('set_transcribe_args')?['asr_config_raw'],outputs('set_transcribe_args')?['type']),outputs('set_transcribe_args')?['asr_config_raw'][outputs('set_transcribe_args')?['type']],outputs('set_transcribe_args')?['asr_config_raw'])",
+                "runAfter": {
+                  "set_transcribe_args": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "input_file": {
+                "type": "Compose",
+                "inputs": {
+                  "bucket_name": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['bucket'],outputs('staged_files2')?['staged_media']['bucket'])",
+                  "full_path": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['object'],outputs('staged_files2')?['staged_media']['object'])",
+                  "version": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['generation'],outputs('staged_files2')?['staged_media']['generation'])"
+                },
+                "runAfter": {
+                  "transcript_config": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "set_transcribe_args": {
+                "type": "Compose",
+                "inputs": {
+                  "asr_config_raw": "@outputs('config')?['transcribe_media']['CI_DEEPGRAM_FEATURES']",
+                  "asr_url_query": "@if(contains(outputs('config')?['transcribe_media'],'CI_ASR_ENDPOINT_QUERY'),outputs('config')?['transcribe_media']['CI_ASR_ENDPOINT_QUERY'],'/v2')",
+                  "type": "@if(greater(outputs('media_info')?['video_streams'], 0), 'video', 'audio')"
+                }
+              },
+              "transcript_config": {
+                "type": "Compose",
+                "inputs": {
+                  "channel_map": [
+                    "@outputs('transcript_config_typed')?['channel_map']['1']",
+                    "@outputs('transcript_config_typed')?['channel_map']['2']"
+                  ]
+                },
+                "runAfter": {
+                  "transcript_config_typed": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "transcript_config_raw": {
+                "type": "Compose",
+                "inputs": "@outputs('config')?['transcribe_media']['CI_NORMALISE_OPTIONS']",
+                "runAfter": {
+                  "asr_config": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "transcript_config_typed": {
+                "type": "Compose",
+                "inputs": "@if(contains(outputs('transcript_config_raw'),outputs('set_transcribe_args')?['type']),outputs('transcript_config_raw')?[outputs('set_transcribe_args')?['type']],outputs('transcript_config_raw'))",
+                "runAfter": {
+                  "transcript_config_raw": [
+                    "SUCCEEDED"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "actions": {}
+            },
+            "runAfter": {
+              "working_files2": [
+                "SUCCEEDED"
+              ]
+            }
+          },
           "media_flow-If-Audio-Video": {
             "type": "If",
             "expression": {
@@ -462,7 +2031,9 @@
                   "method": "POST",
                   "body": {
                     "context": "@outputs('context')",
-                    "staging_config": "@outputs('staging_config')",
+                    "function_config": {
+                      "signing_account": "@outputs('config')?['transcode_media']['CI_SA_EMAIL']"
+                    },
                     "input_files": {
                       "media": {
                         "bucket_name": "@outputs('staged_files1')?['staged_media']['bucket']",
@@ -470,9 +2041,7 @@
                         "version": "@outputs('staged_files1')?['staged_media']['generation']"
                       }
                     },
-                    "function_config": {
-                      "signing_account": "@outputs('config')?['transcode_media']['CI_SA_EMAIL']"
-                    }
+                    "staging_config": "@outputs('staging_config')"
                   }
                 },
                 "runtimeConfiguration": {
@@ -494,17 +2063,6 @@
                   ]
                 },
                 "actions": {
-                  "staged_compressed_audio_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "compressed_audio": {
-                        "bucket": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['version'])",
-                        "object": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['uploaded']"
-                      }
-                    }
-                  },
                   "staged_audio_obj": {
                     "type": "Compose",
                     "inputs": {
@@ -519,6 +2077,17 @@
                       "staged_compressed_audio_obj": [
                         "SUCCEEDED"
                       ]
+                    }
+                  },
+                  "staged_compressed_audio_obj": {
+                    "type": "Compose",
+                    "inputs": {
+                      "compressed_audio": {
+                        "bucket": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['bucket_name']",
+                        "generation": "@json(body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['version'])",
+                        "object": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['full_path']",
+                        "uploaded_at": "@body('HTTPCall-WFTranscode')?['staged_files']['compressed_audio']['uploaded']"
+                      }
                     }
                   }
                 },
@@ -717,20 +2286,11 @@
                   ]
                 }
               },
-              "staged_working_files.waveform": {
+              "staged_files.compressed_video": {
                 "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_waveform_obj'),null),outputs('tempfile'),outputs('staged_waveform_obj'))",
+                "inputs": "@if(equals(outputs('staged_compressed_video_obj'),null),outputs('tempfile'),outputs('staged_compressed_video_obj'))",
                 "runAfter": {
-                  "If_waveform": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_files.video_with_added_blank_audio": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_video_with_added_blank_audio_obj'),null),outputs('tempfile'),outputs('staged_video_with_added_blank_audio_obj'))",
-                "runAfter": {
-                  "If_video_with_added_blank_audio": [
+                  "If_compressed_video": [
                     "SUCCEEDED"
                   ]
                 }
@@ -744,11 +2304,20 @@
                   ]
                 }
               },
-              "staged_files.compressed_video": {
+              "staged_files.video_with_added_blank_audio": {
                 "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_compressed_video_obj'),null),outputs('tempfile'),outputs('staged_compressed_video_obj'))",
+                "inputs": "@if(equals(outputs('staged_video_with_added_blank_audio_obj'),null),outputs('tempfile'),outputs('staged_video_with_added_blank_audio_obj'))",
                 "runAfter": {
-                  "If_compressed_video": [
+                  "If_video_with_added_blank_audio": [
+                    "SUCCEEDED"
+                  ]
+                }
+              },
+              "staged_working_files.waveform": {
+                "type": "Compose",
+                "inputs": "@if(equals(outputs('staged_waveform_obj'),null),outputs('tempfile'),outputs('staged_waveform_obj'))",
+                "runAfter": {
+                  "If_waveform": [
                     "SUCCEEDED"
                   ]
                 }
@@ -831,186 +2400,6 @@
                 "SUCCEEDED"
               ]
             }
-          },
-          "config.transcribe_media.CI_TRANSCRIPTION-transcribe": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "equals": [
-                    "@outputs('config')?['transcribe_media']['CI_TRANSCRIPTION']",
-                    true
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "set_transcribe_args": {
-                "type": "Compose",
-                "inputs": {
-                  "type": "@if(greater(outputs('media_info')?['video_streams'], 0), 'video', 'audio')",
-                  "asr_config_raw": "@outputs('config')?['transcribe_media']['CI_DEEPGRAM_FEATURES']",
-                  "asr_url_query": "@if(contains(outputs('config')?['transcribe_media'],'CI_ASR_ENDPOINT_QUERY'),outputs('config')?['transcribe_media']['CI_ASR_ENDPOINT_QUERY'],'/v2')"
-                }
-              },
-              "asr_config_typed": {
-                "type": "Compose",
-                "inputs": "@if(contains(outputs('set_transcribe_args')?['asr_config_raw'],outputs('set_transcribe_args')?['type']),outputs('set_transcribe_args')?['asr_config_raw'][outputs('set_transcribe_args')?['type']],outputs('set_transcribe_args')?['asr_config_raw'])",
-                "runAfter": {
-                  "set_transcribe_args": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "asr_config": {
-                "type": "Compose",
-                "inputs": {
-                  "api_key": "bdd86485147d46117cd99e95514894b3393a3952",
-                  "features": "@outputs('asr_config_typed')"
-                },
-                "runAfter": {
-                  "asr_config_typed": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "transcript_config_raw": {
-                "type": "Compose",
-                "inputs": "@outputs('config')?['transcribe_media']['CI_NORMALISE_OPTIONS']",
-                "runAfter": {
-                  "asr_config": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "transcript_config_typed": {
-                "type": "Compose",
-                "inputs": "@if(contains(outputs('transcript_config_raw'),outputs('set_transcribe_args')?['type']),outputs('transcript_config_raw')?[outputs('set_transcribe_args')?['type']],outputs('transcript_config_raw'))",
-                "runAfter": {
-                  "transcript_config_raw": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "transcript_config": {
-                "type": "Compose",
-                "inputs": {
-                  "channel_map": [
-                    "@outputs('transcript_config_typed')?['channel_map']['1']",
-                    "@outputs('transcript_config_typed')?['channel_map']['2']"
-                  ]
-                },
-                "runAfter": {
-                  "transcript_config_typed": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "input_file": {
-                "type": "Compose",
-                "inputs": {
-                  "bucket_name": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['bucket'],outputs('staged_files2')?['staged_media']['bucket'])",
-                  "full_path": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['object'],outputs('staged_files2')?['staged_media']['object'])",
-                  "version": "@if(contains(outputs('staged_files2'),'temp_audio'),outputs('staged_files2')?['temp_audio']['generation'],outputs('staged_files2')?['staged_media']['generation'])"
-                },
-                "runAfter": {
-                  "transcript_config": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "HTTPCall-WFTranscribe": {
-                "type": "HttpWebhook",
-                "inputs": {
-                  "subscribe": {
-                    "method": "POST",
-                    "uri": "@parameters('function_map-url')?['transcribe_media']",
-                    "body": {
-                      "callbackUrl": "@listCallbackUrl()",
-                      "data": "@outputs('InputForTranscribe')"
-                    }
-                  }
-                },
-                "runAfter": {
-                  "InputForTranscribe": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "InputForTranscribe": {
-                "type": "Compose",
-                "inputs": {
-                  "context": "@outputs('context')",
-                  "staging_config": "@outputs('staging_config')",
-                  "input_files": {
-                    "audio": "@outputs('input_file')"
-                  },
-                  "function_config": {
-                    "signing_account": "@outputs('config')?['transcode_media']['CI_SA_EMAIL']",
-                    "asr_config": "@outputs('asr_config')",
-                    "transcript_config": "@outputs('transcript_config')"
-                  }
-                },
-                "runAfter": {
-                  "input_file": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "IfHTTPWebhookCall-WFTranscribe-Is-Success": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "equals": [
-                        "@body('HTTPCall-WFTranscribe')?['status']",
-                        "success"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_transcript_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "transcript": {
-                        "bucket": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['bucket_name']",
-                        "generation": "@json(outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['version'])",
-                        "object": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['full_path']",
-                        "uploaded_at": "@outputs('HTTPCall-WFTranscribe')?['body']['staged_files']['transcript']['uploaded']"
-                      }
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {
-                    "Terminate1": {
-                      "type": "Terminate",
-                      "inputs": {
-                        "runStatus": "Failed",
-                        "runError": {
-                          "code": "500",
-                          "message": "@body('HTTPCall-WFTranscribe')?['message']"
-                        }
-                      }
-                    }
-                  }
-                },
-                "runAfter": {
-                  "HTTPCall-WFTranscribe": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            },
-            "runAfter": {
-              "working_files2": [
-                "SUCCEEDED"
-              ]
-            }
           }
         },
         "else": {
@@ -1045,750 +2434,27 @@
           ]
         }
       },
-      "staged_files3": {
+      "raw_message": {
         "type": "Compose",
-        "inputs": "@if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('staged_files2'),outputs('staged_transcript_obj')),outputs('staged_files2'))",
-        "runAfter": {
-          "orchestrate_flow-If-Audio-Video-Chat-Transcript-copy": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "working_files3": {
-        "type": "Compose",
-        "inputs": "@if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('working_files2'),outputs('staged_transcript_obj')),outputs('working_files2'))",
-        "runAfter": {
-          "staged_files3": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "config.transcribe_media.CI_TRANSCRIPTION-analyse": {
-        "type": "If",
-        "expression": {
-          "or": [
-            {
-              "equals": [
-                "@outputs('config')?['transcribe_media']['CI_TRANSCRIPTION']",
-                true
-              ]
-            }
-          ]
-        },
-        "actions": {
-          "InputForAnalyse": {
-            "type": "Compose",
-            "inputs": {
-              "context": "@outputs('context')",
-              "staging_config": "@outputs('staging_config')",
-              "input_files": {
-                "transcript": {
-                  "bucket_name": "@outputs('staged_files3')?['transcript']['bucket']",
-                  "full_path": "@outputs('staged_files3')?['transcript']['object']",
-                  "version": "@outputs('staged_files3')?['transcript']['generation']"
-                }
-              },
-              "function_config": {
-                "nlp_config": {
-                  "nlp_ignore": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'nlp_ignore'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['nlp_ignore'],outputs('EmptyArray'))",
-                  "rule_patterns": "@if(contains(outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS'],'rule_patterns'),outputs('config')?['analyse_transcript']['CI_NLP_OPTIONS']['rule_patterns'],outputs('EmptyArray'))"
-                },
-                "spellcheck_config": {
-                  "add_words": "@if(contains(outputs('config')?['analyse_transcript'],'CI_SPELLCHECK_OPTIONS'),outputs('config')?['analyse_transcript']['CI_SPELLCHECK_OPTIONS']['add_words'],outputs('EmptyArray'))"
-                }
-              }
-            }
-          },
-          "IfHTTPCall-WFAnalyseIsSuccess": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "equals": [
-                    "@body('HTTPCall-WFAnalyse')?['status']",
-                    "success"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "If-metrics": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
-                        "metrics"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_working_metrics_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "metrics": {
-                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['version'])",
-                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['metrics']['uploaded']"
-                      }
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "If-nlp": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
-                        "nlp"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_working_nlp_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "nlp": {
-                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['version'])",
-                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['nlp']['uploaded']"
-                      }
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "If-spellchecked_transcript": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFAnalyse')?['staged_files']",
-                        "spellchecked_transcript"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_spellchecked_transcript_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "spellchecked_transcript": {
-                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['version'])",
-                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['uploaded']"
-                      }
-                    }
-                  },
-                  "working_transcript_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "transcript": {
-                        "bucket": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['version'])",
-                        "object": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFAnalyse')?['staged_files']['spellchecked_transcript']['uploaded']"
-                      }
-                    },
-                    "runAfter": {
-                      "staged_spellchecked_transcript_obj": [
-                        "SUCCEEDED"
-                      ]
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "staged_working_files.metrics": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_working_metrics_obj'),null),outputs('tempfile'),outputs('staged_working_metrics_obj'))",
-                "runAfter": {
-                  "If-metrics": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_working_files.nlp": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_working_nlp_obj'),null),outputs('tempfile'),outputs('staged_working_nlp_obj'))",
-                "runAfter": {
-                  "If-nlp": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_files.spellchecked_transcript": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_spellchecked_transcript_obj'),null),outputs('tempfile'),outputs('staged_spellchecked_transcript_obj'))",
-                "runAfter": {
-                  "If-spellchecked_transcript": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "working_files.transcript": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('working_transcript_obj'),null),outputs('tempfile'),outputs('working_transcript_obj'))",
-                "runAfter": {
-                  "staged_files.spellchecked_transcript": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {
-                "Terminate2": {
-                  "type": "Terminate",
-                  "inputs": {
-                    "runStatus": "Failed",
-                    "runError": {
-                      "code": "500",
-                      "message": "@body('HTTPCall-WFAnalyse')?['message']"
-                    }
-                  }
-                }
-              }
-            },
-            "runAfter": {
-              "HTTPCall-WFAnalyse": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "HTTPCall-WFAnalyse": {
-            "type": "HttpWebhook",
-            "inputs": {
-              "subscribe": {
-                "method": "POST",
-                "uri": "@parameters('function_map-url')?['analyse_transcript']",
-                "body": {
-                  "callbackUrl": "@listCallbackUrl()",
-                  "data": "@outputs('InputForAnalyse')"
-                }
-              }
-            },
-            "runAfter": {
-              "InputForAnalyse": [
-                "SUCCEEDED"
-              ]
-            },
-            "limit": {
-              "timeout": "PT1H"
-            }
-          }
-        },
-        "else": {
-          "actions": {}
+        "inputs": {
+          "azure_location": "@outputs('context')?['azure_location']",
+          "azure_subscription": "@outputs('context')?['azure_subscription']",
+          "client_id": "@outputs('context')?['client_id']",
+          "config_bucket_name": "@outputs('context')?['config_bucket_name']",
+          "content_files": "@outputs('file_list')",
+          "execution_id": "@outputs('context')?['execution_id']",
+          "execution_start": "@outputs('context')?['execution_start']",
+          "interaction_id": "@outputs('context')?['interaction_id']",
+          "redact": "@outputs('config')?['redact']['CI_REDACT']",
+          "trigger_file_gen": "@outputs('context')?['trigger_file']['version']",
+          "trigger_file_name": "@first(split(outputs('context')?['trigger_file']['name'],'.'))",
+          "trigger_file_name_ext": "@outputs('context')?['trigger_file']['name']",
+          "trigger_file_type": "@outputs('context')?['type']",
+          "trigger_file_uploaded": "@outputs('context')?['trigger_file']['upload_timestamp']",
+          "trigger_file_uri": "@outputs('LandingFileData')?['url']"
         },
         "runAfter": {
-          "working_files3": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "staged_files4": {
-        "type": "Compose",
-        "inputs": "@removeProperty(if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('staged_files3'),outputs('staged_working_files.metrics'),outputs('staged_working_files.nlp'),outputs('staged_files.spellchecked_transcript')),outputs('staged_files3')),'tempfile')",
-        "runAfter": {
-          "config.transcribe_media.CI_TRANSCRIPTION-analyse": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "working_files4": {
-        "type": "Compose",
-        "inputs": "@removeProperty(if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('working_files3'),outputs('staged_working_files.metrics'),outputs('staged_working_files.nlp'),outputs('working_files.transcript')),outputs('working_files3')),'tempfile')",
-        "runAfter": {
-          "staged_files4": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "config.redact.CI_REDACT-redact": {
-        "type": "If",
-        "expression": {
-          "or": [
-            {
-              "equals": [
-                "@outputs('config')?['redact']['CI_REDACT']",
-                true
-              ]
-            }
-          ]
-        },
-        "actions": {
-          "redaction_input_files-nlp-transcript": {
-            "type": "Compose",
-            "inputs": {
-              "nlp": {
-                "bucket_name": "@outputs('working_files4')?['nlp']['bucket']",
-                "full_path": "@outputs('working_files4')?['nlp']['object']",
-                "version": "@outputs('working_files4')?['nlp']['generation']"
-              },
-              "transcript": {
-                "bucket_name": "@outputs('working_files4')?['transcript']['bucket']",
-                "full_path": "@outputs('working_files4')?['transcript']['object']",
-                "version": "@outputs('working_files4')?['transcript']['generation']"
-              }
-            }
-          },
-          "AudioInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files4')",
-                    "audio"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "redactaudioinput": {
-                "type": "Compose",
-                "inputs": {
-                  "audio": {
-                    "bucket_name": "@outputs('working_files4')?['audio']['bucket']",
-                    "full_path": "@outputs('working_files4')?['audio']['object']",
-                    "version": "@outputs('working_files4')?['audio']['generation']"
-                  }
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            },
-            "runAfter": {
-              "redaction_input_files-nlp-transcript": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "VideoInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files4')",
-                    "video"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "redactvideoinput": {
-                "type": "Compose",
-                "inputs": {
-                  "video": {
-                    "bucket_name": "@outputs('working_files4')?['video']['bucket']",
-                    "full_path": "@outputs('working_files4')?['video']['object']",
-                    "version": "@outputs('working_files4')?['video']['generation']"
-                  }
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            },
-            "runAfter": {
-              "redaction_input_files.audio": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "redaction_input_files.audio": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('redactaudioinput'),null),outputs('tempfile'),outputs('redactaudioinput'))",
-            "runAfter": {
-              "AudioInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "redaction_input_files.video": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('redactvideoinput'),null),outputs('tempfile'),outputs('redactvideoinput'))",
-            "runAfter": {
-              "VideoInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "redaction_input_files": {
-            "type": "Compose",
-            "inputs": "@removeProperty(union(outputs('redaction_input_files-nlp-transcript'),outputs('redaction_input_files.audio'),outputs('redaction_input_files.video')),'tempfile')",
-            "runAfter": {
-              "redaction_input_files.video": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "InputForRedact": {
-            "type": "Compose",
-            "inputs": {
-              "context": "@outputs('context')",
-              "staging_config": "@outputs('staging_config')",
-              "input_files": "@outputs('redaction_input_files')",
-              "function_config": {
-                "signing_account": "@outputs('config')?['redact']['CI_SA_EMAIL']",
-                "redact_config": {
-                  "types_to_redact": "@if(contains(outputs('config')?['redact']['CI_REDACT_OPTIONS'],'types_to_redact'),outputs('config')['redact']['CI_REDACT_OPTIONS']['types_to_redact'],outputs('EmptyArray'))"
-                }
-              }
-            },
-            "runAfter": {
-              "redaction_input_files": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "HTTPCall-WFRedact": {
-            "type": "HttpWebhook",
-            "inputs": {
-              "subscribe": {
-                "method": "POST",
-                "uri": "@parameters('function_map-url')?['redact']",
-                "body": {
-                  "callbackUrl": "@listCallbackUrl()",
-                  "data": "@outputs('InputForRedact')"
-                }
-              }
-            },
-            "runAfter": {
-              "InputForRedact": [
-                "SUCCEEDED"
-              ]
-            },
-            "limit": {
-              "timeout": "PT1H"
-            }
-          },
-          "HTTPCall-WFRedactIsSuccess": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "equals": [
-                    "@body('HTTPCall-WFRedact')?['status']",
-                    "success"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@body('HTTPCall-WFRedact')?['status_code']",
-                    200
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "If_redacted_audio": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFRedact')?['staged_files']",
-                        "redacted_audio"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_redacted_audio_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "redacted_audio": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['uploaded']"
-                      }
-                    }
-                  },
-                  "staged_audio_obj1": {
-                    "type": "Compose",
-                    "inputs": {
-                      "audio": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_audio']['uploaded']"
-                      }
-                    },
-                    "runAfter": {
-                      "staged_redacted_audio_obj": [
-                        "SUCCEEDED"
-                      ]
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "If_redacted_nlp": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFRedact')?['staged_files']",
-                        "redacted_nlp"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_redacted_nlp_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "redacted_nlp": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['uploaded']"
-                      }
-                    }
-                  },
-                  "staged_nlp_obj1": {
-                    "type": "Compose",
-                    "inputs": {
-                      "nlp": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_nlp']['uploaded']"
-                      }
-                    },
-                    "runAfter": {
-                      "staged_redacted_nlp_obj": [
-                        "SUCCEEDED"
-                      ]
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "If_redacted_transcript": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFRedact')?['staged_files']",
-                        "redacted_transcript"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_redacted_transcript_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "redacted_transcript": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['uploaded']"
-                      }
-                    }
-                  },
-                  "staged_transcript_obj1": {
-                    "type": "Compose",
-                    "inputs": {
-                      "transcript": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_transcript']['uploaded']"
-                      }
-                    },
-                    "runAfter": {
-                      "staged_redacted_transcript_obj": [
-                        "SUCCEEDED"
-                      ]
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "If_redacted_video": {
-                "type": "If",
-                "expression": {
-                  "or": [
-                    {
-                      "contains": [
-                        "@body('HTTPCall-WFRedact')?['staged_files']",
-                        "redacted_video"
-                      ]
-                    }
-                  ]
-                },
-                "actions": {
-                  "staged_redacted_video_obj": {
-                    "type": "Compose",
-                    "inputs": {
-                      "redacted_video": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['uploaded']"
-                      }
-                    }
-                  },
-                  "staged_video_obj1": {
-                    "type": "Compose",
-                    "inputs": {
-                      "video": {
-                        "bucket": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['bucket_name']",
-                        "generation": "@json(body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['version'])",
-                        "object": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['full_path']",
-                        "uploaded_at": "@body('HTTPCall-WFRedact')?['staged_files']['redacted_video']['uploaded']"
-                      }
-                    },
-                    "runAfter": {
-                      "staged_redacted_video_obj": [
-                        "SUCCEEDED"
-                      ]
-                    }
-                  }
-                },
-                "else": {
-                  "actions": {}
-                }
-              },
-              "staged_files.redacted_transcript": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_redacted_transcript_obj'),null),outputs('tempfile'),outputs('staged_redacted_transcript_obj'))",
-                "runAfter": {
-                  "If_redacted_transcript": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "working_files.transcript1": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_transcript_obj1'),null),outputs('tempfile'),outputs('staged_transcript_obj1'))",
-                "runAfter": {
-                  "staged_files.redacted_transcript": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_files.redacted_nlp": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_redacted_nlp_obj'),null),outputs('tempfile'),outputs('staged_redacted_nlp_obj'))",
-                "runAfter": {
-                  "If_redacted_nlp": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "working_files.nlp": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_nlp_obj1'),null),outputs('tempfile'),outputs('staged_nlp_obj1'))",
-                "runAfter": {
-                  "staged_files.redacted_nlp": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_files.redacted_audio": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_redacted_audio_obj'),null),outputs('tempfile'),outputs('staged_redacted_audio_obj'))",
-                "runAfter": {
-                  "If_redacted_audio": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "working_files.audio": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_audio_obj1'),null),outputs('tempfile'),outputs('staged_audio_obj1'))",
-                "runAfter": {
-                  "staged_files.redacted_audio": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "staged_files.redacted_video": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_redacted_video_obj'),null),outputs('tempfile'),outputs('staged_redacted_video_obj'))",
-                "runAfter": {
-                  "If_redacted_video": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "working_files.video": {
-                "type": "Compose",
-                "inputs": "@if(equals(outputs('staged_video_obj1'),null),outputs('tempfile'),outputs('staged_video_obj1'))",
-                "runAfter": {
-                  "staged_files.redacted_video": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {
-                "Terminate3": {
-                  "type": "Terminate",
-                  "inputs": {
-                    "runStatus": "Failed",
-                    "runError": {
-                      "code": "500",
-                      "message": "@body('HTTPCall-WFRedact')?['message']"
-                    }
-                  }
-                }
-              }
-            },
-            "runAfter": {
-              "HTTPCall-WFRedact": [
-                "SUCCEEDED"
-              ]
-            }
-          }
-        },
-        "else": {
-          "actions": {}
-        },
-        "runAfter": {
-          "working_files4": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "EmptyArray": {
-        "type": "Compose",
-        "inputs": [],
-        "runAfter": {
-          "tempfilearray": [
+          "file_list": [
             "SUCCEEDED"
           ]
         }
@@ -1802,6 +2468,82 @@
           ]
         }
       },
+      "staged_files1": {
+        "type": "Compose",
+        "inputs": {
+          "staged_media": "@outputs('staged_media_obj')"
+        },
+        "runAfter": {
+          "working_files1": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "staged_files3": {
+        "type": "Compose",
+        "inputs": "@if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('staged_files2'),outputs('staged_transcript_obj')),outputs('staged_files2'))",
+        "runAfter": {
+          "orchestrate_flow-If-Audio-Video-Chat-Transcript-copy": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "staged_files4": {
+        "type": "Compose",
+        "inputs": "@removeProperty(if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('staged_files3'),outputs('staged_working_files.metrics'),outputs('staged_working_files.nlp'),outputs('staged_files.spellchecked_transcript')),outputs('staged_files3')),'tempfile')",
+        "runAfter": {
+          "config.transcribe_media.CI_TRANSCRIPTION-analyse": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "staged_media_obj": {
+        "type": "Compose",
+        "inputs": {
+          "bucket": "@outputs('CopyBlobToStagingContainer')?['body']['containerName']",
+          "generation": "@json(outputs('CopyBlobToStagingContainer')?['body']['eTag'])",
+          "object": "@outputs('CopyBlobToStagingContainer')?['body']['name']",
+          "uploaded_at": "@outputs('CopyBlobToStagingContainer')?['body']['creationTime']"
+        },
+        "runAfter": {
+          "CopyBlobToStagingContainer": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "staging_config": {
+        "type": "Compose",
+        "inputs": {
+          "bucket_name": "@outputs('buckets')?['staging']",
+          "file_prefix": "staged",
+          "folder_path": "@body('HTTPCall-WFConfigure')?['staging_folder_path']"
+        },
+        "runAfter": {
+          "config": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "tempfile": {
+        "type": "Compose",
+        "inputs": {
+          "tempfile": ""
+        },
+        "runAfter": {
+          "staged_media_obj": [
+            "SUCCEEDED"
+          ]
+        }
+      },
+      "tempfilearray": {
+        "type": "Compose",
+        "inputs": {},
+        "runAfter": {
+          "tempfile": [
+            "SUCCEEDED"
+          ]
+        }
+      },
       "working_files": {
         "type": "Compose",
         "inputs": "@removeProperty(if(equals(outputs('config')?['redact']['CI_REDACT'],true),union(outputs('working_files4'),outputs('working_files.audio'),outputs('working_files.nlp'),outputs('working_files.transcript1'),outputs('working_files.video')),outputs('working_files4')),'tempfile')",
@@ -1811,768 +2553,29 @@
           ]
         }
       },
-      "Migrate-WorkingFilesData": {
-        "type": "If",
-        "expression": {
-          "or": [
-            {
-              "not": {
-                "equals": [
-                  "@outputs('working_files')",
-                  ""
-                ]
-              }
-            }
-          ]
-        },
-        "actions": {
-          "IfAudioInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "audio"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "CopyAudioBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('audiocopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('audiocopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('audiocopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('audiocopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "audiocopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "audiocopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['audio']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['audio']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/audio.@{last(split(outputs('working_files')?['audio']['object'],'.'))}"
-                }
-              },
-              "audio-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "audio": {
-                    "bucket": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyAudioBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyAudioBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyAudioBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "audio-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyAudioBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyAudioBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyAudioBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "audio",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyAudioBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "audio-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "IfMetricsInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "metrics"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "metricscopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['metrics']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['metrics']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/metrics.@{last(split(outputs('working_files')?['metrics']['object'],'.'))}"
-                }
-              },
-              "CopyMetricsBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('metricscopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('metricscopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('metricscopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('metricscopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "metricscopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "metrics-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "metrics": {
-                    "bucket": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyMetricsBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyMetricsBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyMetricsBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "metrics-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyMetricsBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyMetricsBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyMetricsBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "metrics",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyMetricsBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "metrics-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "IfNLPInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "nlp"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "nlpcopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['nlp']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['nlp']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/nlp.@{last(split(outputs('working_files')?['nlp']['object'],'.'))}"
-                }
-              },
-              "CopyNLPBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('nlpcopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('nlpcopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('nlpcopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('nlpcopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "nlpcopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "nlp-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "nlp": {
-                    "bucket": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyNLPBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyNLPBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyNLPBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "nlp-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyNLPBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyNLPBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyNLPBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "nlp",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyNLPBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "nlp-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "IfTranscriptInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "transcript"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "transcriptcopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['transcript']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['transcript']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/transcript.@{last(split(outputs('working_files')?['transcript']['object'],'.'))}"
-                }
-              },
-              "CopyTranscriptBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('transcriptcopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('transcriptcopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('transcriptcopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('transcriptcopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "transcriptcopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "transcript-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "transcript": {
-                    "bucket": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyTranscriptBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyTranscriptBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "transcript-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyTranscriptBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "transcript",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyTranscriptBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "transcript-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "IfVideoInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "video"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "videocopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['video']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['video']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/video.@{last(split(outputs('working_files')?['video']['object'],'.'))}"
-                }
-              },
-              "CopyVideoBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('videocopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('videocopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('videocopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('videocopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "videocopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "video-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "video": {
-                    "bucket": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyVideoBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyVideoBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyVideoBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "video-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyVideoBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyVideoBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyVideoBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "video",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyVideoBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "video-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "IfWaveformInWorkingFiles": {
-            "type": "If",
-            "expression": {
-              "or": [
-                {
-                  "contains": [
-                    "@outputs('working_files')",
-                    "waveform"
-                  ]
-                }
-              ]
-            },
-            "actions": {
-              "waveformcopyinput": {
-                "type": "Compose",
-                "inputs": {
-                  "StagingContainer": "@outputs('working_files')?['waveform']['bucket']",
-                  "StagingBlobPath": "@outputs('working_files')?['waveform']['object']",
-                  "ContentContainer": "@outputs('buckets')?['content']",
-                  "ContentPath": "@{outputs('content_config')?['folder_path']}/waveform.@{last(split(outputs('working_files')?['waveform']['object'],'.'))}"
-                }
-              },
-              "CopyWaveformBlobFromStagingToContent": {
-                "type": "ServiceProvider",
-                "inputs": {
-                  "parameters": {
-                    "sourceContainerName": "@outputs('waveformcopyinput')?['StagingContainer']",
-                    "sourceBlobName": "@outputs('waveformcopyinput')?['StagingBlobPath']",
-                    "destinationContainerName": "@outputs('waveformcopyinput')?['ContentContainer']",
-                    "destinationBlobName": "@outputs('waveformcopyinput')?['ContentPath']",
-                    "overrideIfExists": true
-                  },
-                  "serviceProviderConfiguration": {
-                    "connectionName": "AzureBlob",
-                    "operationId": "copyBlob",
-                    "serviceProviderId": "/serviceProviders/AzureBlob"
-                  }
-                },
-                "runAfter": {
-                  "waveformcopyinput": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "waveform-contentfile": {
-                "type": "Compose",
-                "inputs": {
-                  "waveform": {
-                    "bucket": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['containerName']",
-                    "generation": "@json(outputs('CopyWaveformBlobFromStagingToContent')?['body']['eTag'])",
-                    "object": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['blobFullPathWithContainer']",
-                    "uploaded_at": "@outputs('CopyWaveformBlobFromStagingToContent')?['body']['creationTime']"
-                  }
-                },
-                "runAfter": {
-                  "CopyWaveformBlobFromStagingToContent": [
-                    "SUCCEEDED"
-                  ]
-                }
-              },
-              "waveform-filelist": {
-                "type": "Compose",
-                "inputs": {
-                  "file_gen": "@json(outputs('CopyWaveformBlobFromStagingToContent')?['body']['eTag'])",
-                  "file_name": "@first(split(last(split(outputs('CopyWaveformBlobFromStagingToContent')?['body']['name'],'/')),'.'))",
-                  "file_name_ext": "@last(split(outputs('CopyWaveformBlobFromStagingToContent')?['body']['name'],'/'))",
-                  "file_type": "waveform",
-                  "file_uri": "https://@{outputs('LandingFileData')?['storageaccountname']}.blob.core.windows.net@{outputs('CopyWaveformBlobFromStagingToContent')?['body']['blobFullPathWithContainer']\n}"
-                },
-                "runAfter": {
-                  "waveform-contentfile": [
-                    "SUCCEEDED"
-                  ]
-                }
-              }
-            },
-            "else": {
-              "actions": {}
-            }
-          },
-          "content_files_audio": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('audio-contentfile'),null),outputs('tempfile'),outputs('audio-contentfile'))",
-            "runAfter": {
-              "IfAudioInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "content_files_metrics": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('metrics-contentfile'),null),outputs('tempfile'),outputs('metrics-contentfile'))",
-            "runAfter": {
-              "IfMetricsInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "content_files_nlp": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('nlp-contentfile'),null),outputs('tempfile'),outputs('nlp-contentfile'))",
-            "runAfter": {
-              "IfNLPInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "content_files_transcript": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('transcript-contentfile'),null),outputs('tempfile'),outputs('transcript-contentfile'))",
-            "runAfter": {
-              "IfTranscriptInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "content_files_video": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('video-contentfile'),null),outputs('tempfile'),outputs('video-contentfile'))",
-            "runAfter": {
-              "IfVideoInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "content_files_waveform": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('waveform-contentfile'),null),outputs('tempfile'),outputs('waveform-contentfile'))",
-            "runAfter": {
-              "IfWaveformInWorkingFiles": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-audio": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('audio-filelist'),null),outputs('tempfilearray'),outputs('audio-filelist'))",
-            "runAfter": {
-              "content_files_audio": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-metrics": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('metrics-filelist'),null),outputs('tempfilearray'),outputs('metrics-filelist'))",
-            "runAfter": {
-              "content_files_metrics": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-nlp": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('nlp-filelist'),null),outputs('tempfilearray'),outputs('nlp-filelist'))",
-            "runAfter": {
-              "content_files_nlp": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-transcript": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('transcript-filelist'),null),outputs('tempfilearray'),outputs('transcript-filelist'))",
-            "runAfter": {
-              "content_files_transcript": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-video": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('video-filelist'),null),outputs('tempfilearray'),outputs('video-filelist'))",
-            "runAfter": {
-              "content_files_video": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "filelist-waveform": {
-            "type": "Compose",
-            "inputs": "@if(equals(outputs('waveform-filelist'),null),outputs('tempfilearray'),outputs('waveform-filelist'))",
-            "runAfter": {
-              "content_files_waveform": [
-                "SUCCEEDED"
-              ]
-            }
-          }
-        },
-        "else": {
-          "actions": {}
-        },
-        "runAfter": {
-          "working_files": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "content_files": {
+      "working_files1": {
         "type": "Compose",
-        "inputs": "@removeProperty(union(outputs('content_files_audio'),outputs('content_files_metrics'),outputs('content_files_nlp'),outputs('content_files_transcript'),outputs('content_files_video'),outputs('content_files_waveform')),'tempfile')",
+        "inputs": "@removeProperty(union(outputs('ifaudiotype'),outputs('ifvideotype'),outputs('iftranscripttype')),'tempfile')",
         "runAfter": {
-          "Migrate-WorkingFilesData": [
+          "IfTypeIsAudioVideoChatTranscript": [
             "SUCCEEDED"
           ]
         }
       },
-      "file_list": {
+      "working_files3": {
         "type": "Compose",
-        "inputs": "@json(replace(concat('[',outputs('filelist-audio'),',',outputs('filelist-metrics'),',',outputs('filelist-nlp'),',',outputs('filelist-transcript'),',',outputs('filelist-video'),',',outputs('filelist-waveform'),',',outputs('tempfilearray'),']'),',{}',''))",
+        "inputs": "@if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('working_files2'),outputs('staged_transcript_obj')),outputs('working_files2'))",
         "runAfter": {
-          "content_files": [
+          "staged_files3": [
             "SUCCEEDED"
           ]
         }
       },
-      "raw_message": {
+      "working_files4": {
         "type": "Compose",
-        "inputs": {
-          "azure_subscription": "@outputs('context')?['azure_subscription']",
-          "azure_location": "@outputs('context')?['azure_location']",
-          "config_bucket_name": "@outputs('context')?['config_bucket_name']",
-          "execution_id": "@outputs('context')?['execution_id']",
-          "execution_start": "@outputs('context')?['execution_start']",
-          "client_id": "@outputs('context')?['client_id']",
-          "interaction_id": "@outputs('context')?['interaction_id']",
-          "redact": "@outputs('config')?['redact']['CI_REDACT']",
-          "trigger_file_type": "@outputs('context')?['type']",
-          "trigger_file_name": "@first(split(outputs('context')?['trigger_file']['name'],'.'))",
-          "trigger_file_name_ext": "@outputs('context')?['trigger_file']['name']",
-          "trigger_file_uri": "@outputs('LandingFileData')?['url']",
-          "trigger_file_gen": "@outputs('context')?['trigger_file']['version']",
-          "trigger_file_uploaded": "@outputs('context')?['trigger_file']['upload_timestamp']",
-          "content_files": "@outputs('file_list')"
-        },
+        "inputs": "@removeProperty(if(equals(outputs('config')?['transcribe_media']['CI_TRANSCRIPTION'],true),union(outputs('working_files3'),outputs('staged_working_files.metrics'),outputs('staged_working_files.nlp'),outputs('working_files.transcript')),outputs('working_files3')),'tempfile')",
         "runAfter": {
-          "file_list": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "encoded_message": {
-        "type": "Compose",
-        "inputs": "@base64(outputs('raw_message'))",
-        "runAfter": {
-          "raw_message": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "Send_message_to_Service_Bus": {
-        "type": "ServiceProvider",
-        "inputs": {
-          "parameters": {
-            "entityName": "@parameters('servicebus_topic_name')",
-            "message": {
-              "contentData": "@outputs('encoded_message')"
-            }
-          },
-          "serviceProviderConfiguration": {
-            "connectionName": "serviceBus",
-            "operationId": "sendMessage",
-            "serviceProviderId": "/serviceProviders/serviceBus"
-          }
-        },
-        "runAfter": {
-          "encoded_message": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "files": {
-        "type": "Compose",
-        "inputs": {
-          "content": "@outputs('content_files')",
-          "staged": "@outputs('staged_files')",
-          "working": "@outputs('working_files')"
-        },
-        "runAfter": {
-          "For_each": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "List_all_the_blobs_using_path": {
-        "type": "ServiceProvider",
-        "inputs": {
-          "parameters": {
-            "containerName": "@outputs('staging_config')?['bucket_name']",
-            "blobNamePrefix": "@{outputs('staging_config')?['folder_path']}/"
-          },
-          "serviceProviderConfiguration": {
-            "connectionName": "AzureBlob",
-            "operationId": "listBlobs",
-            "serviceProviderId": "/serviceProviders/AzureBlob"
-          }
-        },
-        "runAfter": {
-          "Send_message_to_Service_Bus": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "For_each": {
-        "type": "Foreach",
-        "foreach": "@outputs('List_all_the_blobs_using_path')?['body']['blobs']",
-        "actions": {
-          "Delete_a_blob": {
-            "type": "ServiceProvider",
-            "inputs": {
-              "parameters": {
-                "containerName": "@outputs('staging_config')?['bucket_name']",
-                "blobName": "@outputs('StagingBlobName')?['BlobName']"
-              },
-              "serviceProviderConfiguration": {
-                "connectionName": "AzureBlob",
-                "operationId": "deleteBlob",
-                "serviceProviderId": "/serviceProviders/AzureBlob"
-              }
-            },
-            "runAfter": {
-              "StagingBlobName": [
-                "SUCCEEDED"
-              ]
-            }
-          },
-          "StagingBlobName": {
-            "type": "Compose",
-            "inputs": {
-              "BlobName": "@items('For_each')?['name']"
-            }
-          }
-        },
-        "runAfter": {
-          "List_all_the_blobs_using_path": [
-            "SUCCEEDED"
-          ]
-        }
-      },
-      "c": {
-        "type": "Compose",
-        "inputs": {
-          "files": "@outputs('files')",
-          "media_info": "@outputs('media_info')"
-        },
-        "runAfter": {
-          "files": [
+          "staged_files4": [
             "SUCCEEDED"
           ]
         }

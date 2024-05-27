@@ -1,31 +1,31 @@
 {
+  "managedApiConnections": {},
   "serviceProviderConnections": {
     "AzureBlob": {
+      "displayName": "Blob-Copy-MI",
+      "parameterSetName": "ManagedServiceIdentity",
       "parameterValues": {
-        "blobStorageEndpoint": "@appsetting('AzureBlob_blobStorageEndpoint')",
         "authProvider": {
           "Type": "ManagedServiceIdentity"
-        }
+        },
+        "blobStorageEndpoint": "@appsetting('AzureBlob_blobStorageEndpoint')"
       },
-      "parameterSetName": "ManagedServiceIdentity",
       "serviceProvider": {
         "id": "/serviceProviders/AzureBlob"
-      },
-      "displayName": "Blob-Connection"
+      }
     },
     "serviceBus": {
+      "displayName": "servicebus-connection",
+      "parameterSetName": "ManagedServiceIdentity",
       "parameterValues": {
-        "fullyQualifiedNamespace": "@appsetting('serviceBus_fullyQualifiedNamespace')",
         "authProvider": {
           "Type": "ManagedServiceIdentity"
-        }
+        },
+        "fullyQualifiedNamespace": "@appsetting('serviceBus_fullyQualifiedNamespace')"
       },
-      "parameterSetName": "ManagedServiceIdentity",
       "serviceProvider": {
         "id": "/serviceProviders/serviceBus"
-      },
-      "displayName": "servicebus-connection"
+      }
     }
-  },
-  "managedApiConnections": {}
+  }
 }

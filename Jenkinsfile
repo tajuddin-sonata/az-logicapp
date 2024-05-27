@@ -75,7 +75,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // checkout scm
-                git branch: 'feature/with_parameter', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
+                git branch: 'feature/workflow_without_retry', url: 'https://github.com/tajuddin-sonata/az-logicapp.git'
 
             }
         }

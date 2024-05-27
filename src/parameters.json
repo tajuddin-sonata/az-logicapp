@@ -1,42 +1,4 @@
 {
-  "function_map-config_sources": {
-    "type": "Object",
-    "value": {
-      "transcode_media": [
-        "process-audio"
-      ],
-      "transcribe_media": [
-        "process-audio",
-        "deepgram",
-        "process-transcript"
-      ],
-      "analyse_transcript": [
-        "process-transcript"
-      ],
-      "redact": [
-        "process-transcript",
-        "redact-audio"
-      ],
-      "process_metadata": [
-        "process-metadata"
-      ]
-    }
-  },
-  "function_map-url": {
-    "type": "Object",
-    "value": {
-      "configure": "$CONFIGURE_FUNC_URL",
-      "transcode_media": "$TRANSCODE_FUNC_URL",
-      "transcribe_media": "$TRANSCRIBE_FUNC_URL",
-      "analyse_transcript": "$ANALYSE_FUNC_URL",
-      "redact": "$REDACT_FUNC_URL",
-      "process_metadata": ""
-    }
-  },
-  "servicebus_topic_name": {
-    "type": "String",
-    "value": "$SERVICE_BUS_TOPIC_NAME"
-  },
   "bucket_label_tags": {
     "type": "Object",
     "value": {
@@ -44,6 +6,44 @@
       "step": "Ci_step",
       "type": "Ci_media_type"
     }
+  },
+  "function_map-config_sources": {
+    "type": "Object",
+    "value": {
+      "analyse_transcript": [
+        "process-transcript"
+      ],
+      "process_metadata": [
+        "process-metadata"
+      ],
+      "redact": [
+        "process-transcript",
+        "redact-audio"
+      ],
+      "transcode_media": [
+        "process-audio"
+      ],
+      "transcribe_media": [
+        "process-audio",
+        "deepgram",
+        "process-transcript"
+      ]
+    }
+  },
+  "function_map-url": {
+    "type": "Object",
+    "value": {
+      "analyse_transcript": "$ANALYSE_FUNC_URL",
+      "configure": "$CONFIGURE_FUNC_URL",
+      "process_metadata": "",
+      "redact": "$REDACT_FUNC_URL",
+      "transcode_media": "$TRANSCODE_FUNC_URL",
+      "transcribe_media": "$TRANSCRIBE_FUNC_URL"
+    }
+  },
+  "servicebus_topic_name": {
+    "type": "String",
+    "value": "$SERVICE_BUS_TOPIC_NAME"
   },
   "staging_config": {
     "type": "Object",
